@@ -37,6 +37,10 @@ body {
     linear-gradient(135deg, var(--bg1), var(--bg2));
   background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
+  /* Oyun arayüzü: uzun basınca/sürükleyince metin ve görseller seçilmesin. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   overscroll-behavior: none;
 }
 
@@ -199,4 +203,17 @@ textarea {
   width: 48px;
   height: 48px;
   font-weight: 800;
+}
+
+/* Yazı yazılan alanlarda seçim ve kopyala/yapıştır çalışsın. */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+img,
+svg,
+canvas {
+  -webkit-user-drag: none;
 }

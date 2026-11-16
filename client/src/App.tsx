@@ -36,6 +36,8 @@ export default function App() {
   const [connected, setConnected] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Davet linkindeki oda kodu (?oda=KOD). */
+  const [inviteCode, setInviteCode] = useState(roomFromUrl);
   const lastState = useRef<RoomState | null>(null);
   const meIdRef = useRef('');
 
@@ -58,7 +60,16 @@ export default function App() {
       setConnected(true);
       // Sayfa yenilendi ya da bağlantı koptuysa odaya otomatik geri dön.
       const code = getActiveRoom();
-      if (code) socket.emit('room:join', { ...loadProfile(), sessionId, code }, handleAck);
+      if (!code) return;
+      socket.emit('room:join', { ...loadProfile(), sessionId, code }, (res: AckResult) => {
+        if (res.ok) return handleAck(res);
+        // Oda artık yok (ör. sunucu yeniden başladı): uyarı göstermeden ana ekrana dön.
+        setActiveRoom(null);
+        setUrlRoom(null);
+        setInviteCode(null);
+        setRoom(null);
+        lastState.current = null;
+      });
     };
     const onDisconnect = () => setConnected(false);
     const onState = (s: RoomState) => {
@@ -104,6 +115,7 @@ export default function App() {
     socket.emit('room:leave');
     setActiveRoom(null);
     setUrlRoom(null);
+    setInviteCode(null);
     setRoom(null);
     lastState.current = null;
     setMessages([]);
@@ -117,7 +129,7 @@ export default function App() {
       <Home
         profile={profile}
         onProfile={setProfile}
-        initialCode={roomFromUrl()}
+        initialCode={inviteCode}
         busy={busy || !connected}
         error={error}
         onCreate={() => enter('create')}
