@@ -8,7 +8,12 @@ const CACHE = 'karala-v1';
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(PRECACHE))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {

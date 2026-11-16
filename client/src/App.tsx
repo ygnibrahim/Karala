@@ -1,41 +1,49 @@
+// Uygulamanın kökü: sunucu bağlantısını ve oyun durumunu yönetir, uygun ekranı gösterir.
+import type { AckResult, ChatMessage, JoinPayload, RoomState } from '@shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AckResult, ChatMessage, RoomState } from '../../shared/protocol';
-import { messageFx, stateFx } from './fx';
-import { socket } from './socket';
-import { getActiveRoom, getSessionId, loadProfile, roomFromUrl, saveProfile, setActiveRoom, setUrlRoom, type Profile } from './session';
-import Home from './screens/Home';
-import Lobby from './screens/Lobby';
+import { messageFx, stateFx } from './effects/gameFx';
+import {
+  getActiveRoom,
+  getSessionId,
+  loadProfile,
+  type Profile,
+  roomFromUrl,
+  saveProfile,
+  setActiveRoom,
+  setUrlRoom,
+} from './lib/session';
+import { socket } from './lib/socket';
 import Game from './screens/Game';
 import GameEnd from './screens/GameEnd';
+import Home from './screens/Home';
+import Lobby from './screens/Lobby';
+import type { GameData } from './types';
 
-export interface GameData {
-  room: RoomState;
-  /** room:state'in alındığı yerel zaman; geri sayım için. */
-  stateAt: number;
-  meId: string;
-  secret: string | null;
-  choices: string[];
-  messages: ChatMessage[];
-  leave: () => void;
-}
+/** Sohbette tutulan en fazla mesaj. */
+const MAX_MESSAGES = 150;
 
 const sessionId = getSessionId();
 
 export default function App() {
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [room, setRoom] = useState<RoomState | null>(null);
+  const [meId, setMeId] = useState('');
   const [stateAt, setStateAt] = useState(0);
   const [secret, setSecret] = useState<string | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
+  const [customWords, setCustomWords] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const lastState = useRef<RoomState | null>(null);
+  const meIdRef = useRef('');
 
   const handleAck = useCallback((res: AckResult) => {
     setBusy(false);
     if (res.ok) {
+      meIdRef.current = res.playerId;
+      setMeId(res.playerId);
       setActiveRoom(res.code);
       setUrlRoom(res.code);
       setError(null);
@@ -50,14 +58,11 @@ export default function App() {
       setConnected(true);
       // Sayfa yenilendi ya da bağlantı koptuysa odaya otomatik geri dön.
       const code = getActiveRoom();
-      if (code) {
-        const p = loadProfile();
-        socket.emit('room:join', { ...p, sessionId, code }, handleAck);
-      }
+      if (code) socket.emit('room:join', { ...loadProfile(), sessionId, code }, handleAck);
     };
     const onDisconnect = () => setConnected(false);
     const onState = (s: RoomState) => {
-      stateFx(lastState.current, s, sessionId);
+      stateFx(lastState.current, s, meIdRef.current);
       lastState.current = s;
       setRoom(s);
       setStateAt(Date.now());
@@ -65,12 +70,13 @@ export default function App() {
     };
     const onMessage = (m: ChatMessage) => {
       messageFx(m);
-      setMessages((list) => [...list.slice(-150), m]);
+      setMessages((list) => [...list.slice(-MAX_MESSAGES), m]);
     };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('room:state', onState);
+    socket.on('room:customWords', setCustomWords);
     socket.on('word:choices', setChoices);
     socket.on('word:secret', setSecret);
     socket.on('chat:message', onMessage);
@@ -79,6 +85,7 @@ export default function App() {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('room:state', onState);
+      socket.off('room:customWords', setCustomWords);
       socket.off('word:choices', setChoices);
       socket.off('word:secret', setSecret);
       socket.off('chat:message', onMessage);
@@ -89,9 +96,8 @@ export default function App() {
     saveProfile(profile);
     setBusy(true);
     setMessages([]);
-    const payload = { ...profile, sessionId, code };
-    if (mode === 'create') socket.emit('room:create', payload, handleAck);
-    else socket.emit('room:join', payload, handleAck);
+    const payload: JoinPayload = { ...profile, sessionId, code };
+    socket.emit(mode === 'create' ? 'room:create' : 'room:join', payload, handleAck);
   };
 
   const leave = () => {
@@ -99,11 +105,13 @@ export default function App() {
     setActiveRoom(null);
     setUrlRoom(null);
     setRoom(null);
+    lastState.current = null;
     setMessages([]);
     setSecret(null);
+    setCustomWords([]);
   };
 
-  let screen;
+  let screen: React.ReactNode;
   if (!room) {
     screen = (
       <Home
@@ -117,7 +125,7 @@ export default function App() {
       />
     );
   } else {
-    const data: GameData = { room, stateAt, meId: sessionId, secret, choices, messages, leave };
+    const data: GameData = { room, stateAt, meId, secret, choices, messages, customWords, leave };
     if (room.phase === 'lobby') screen = <Lobby data={data} />;
     else if (room.phase === 'gameEnd') screen = <GameEnd data={data} />;
     else screen = <Game data={data} />;

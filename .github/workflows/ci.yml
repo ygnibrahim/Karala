@@ -1,0 +1,37 @@
+# Her push ve PR'da: kod stili, tip kontrolü, testler ve derleme.
+# Render, main dalında bu kontroller geçmeden yayına almaz (render.yaml → autoDeployTrigger: checksPass).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Kod stili (Biome)
+        run: npm run lint
+      - name: Tip kontrolü
+        run: npm run typecheck
+      - name: Testler
+        run: npm test
+      - name: Derleme
+        run: npm run build
+      - name: Bağımlılık güvenlik taraması
+        run: npm audit --omit=dev --audit-level=high

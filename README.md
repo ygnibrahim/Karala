@@ -11,18 +11,18 @@ Tarayıcıda ve Android/iOS'ta aynı kodla çalışır.
 
 ```
 Karala/
-├─ shared/protocol.ts   → Sunucu ve istemcinin ortak tipleri (oda durumu, çizim, socket olayları)
-├─ server/              → Node.js + Socket.IO oyun sunucusu
-│  └─ src/
-│     ├─ index.ts       → Bağlantılar, oda kurma/katılma
-│     ├─ Room.ts        → Oyun mantığı: turlar, süre, ipuçları, puanlama
-│     ├─ words.ts       → Türkçe kelime havuzu
-│     └─ util.ts        → Tahmin karşılaştırma, "çok yakın" kontrolü
-└─ client/              → React + Vite arayüzü (+ Capacitor ile mobil)
-   ├─ src/screens/      → Home, Lobby, Game, GameEnd ekranları
-   ├─ src/components/   → Board (tuval + araçlar), Chat, PlayerList
-   └─ android/          → Android Studio projesi (Capacitor üretir)
+├─ shared/        Sunucu + istemci ortak kodu: tipler, sabitler, çizim kuralı, socket sözleşmesi
+├─ server/
+│  ├─ src/        app · config · socket/ (istek sınırı, olaylar) · validation/ · game/ (Room, kurallar) · utils/
+│  └─ test/       Birim testleri + uçtan uca güvenlik testleri
+├─ client/
+│  ├─ src/        screens/ · components/{common,board,game,lobby} · canvas/ · effects/ · lib/ · hooks/ · styles/
+│  ├─ public/     PWA: manifest, ikonlar, service worker
+│  └─ android/    Android Studio projesi (Capacitor)
+└─ docs/          ARCHITECTURE.md → mimari, kod kuralları, güvenlik modeli
 ```
+
+Ayrıntılar için: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
 ## Çalıştırma (tarayıcı)
 
@@ -41,6 +41,7 @@ npm run dev
 
 1. `npm run dev` çalışır durumda olsun.
 2. Başka bir terminalde:
+
    ```bash
    npm run android:live
    ```
@@ -56,13 +57,23 @@ npm run dev
 npm run android:build
 ```
 
-## Diğer komutlar
+## Komutlar
 
-| Komut | Ne yapar |
-|---|---|
-| `npm run typecheck` | Sunucu + istemci tip kontrolü |
-| `npm run build` | İstemciyi `client/dist`'e derler |
-| `npm start` | Sunucuyu başlatır; `client/dist` varsa oyunu da aynı adresten sunar (yayın için) |
+| Komut               | Ne yapar                                                            |
+| ------------------- | ------------------------------------------------------------------- |
+| `npm run dev`       | Geliştirme: sunucu (3001) + arayüz (5173)                           |
+| `npm test`          | Tüm testler (birim + güvenlik)                                      |
+| `npm run lint`      | Kod stili ve hata denetimi (Biome)                                  |
+| `npm run format`    | Kodu otomatik biçimlendirir                                         |
+| `npm run typecheck` | Sunucu + istemci tip kontrolü                                       |
+| `npm run check`     | lint + typecheck + test: **push etmeden önce çalıştır**             |
+| `npm run build`     | İstemciyi `client/dist`'e derler                                    |
+| `npm start`         | Sunucuyu başlatır; `client/dist` varsa oyunu da aynı adresten sunar |
+
+## Yayına alma
+
+`main` dalına push → GitHub Actions (lint, tip, test, derleme, güvenlik taraması) → **geçerse** Render otomatik yayınlar.
+Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki sürüm: https://karala.onrender.com/health
 
 ## Oyun kuralları (özet)
 
@@ -78,6 +89,7 @@ npm run android:build
 - [x] Başlangıç sürümü: oda, lobi, çizim, tahmin, puan, kürsü
 - [x] Android projesi (Capacitor)
 - [x] Sesler ve animasyonlar
-- [x] İnternette yayın (Render, `main`'e her push otomatik yayınlanır)
-- [ ] QR ile katılma, APK dağıtımı
+- [x] İnternette yayın (Render) + PWA (ana ekrana yüklenebilir)
+- [x] Klasör yapısı, kod kuralları, güvenlik sertleştirmesi ve testler, CI
+- [ ] QR ile katılma
 - [ ] Takım modu, "Kırık Telefon" modu, herkese açık odalar

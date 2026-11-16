@@ -1,0 +1,11 @@
+/* Tüm stiller. Sıra önemlidir: sonraki dosyalar öncekileri ezebilir. */
+@import './base.css';
+@import './home.css';
+@import './lobby.css';
+@import './chat.css';
+@import './game.css';
+@import './end.css';
+@import './responsive.css';
+@import './effects.css';
+@import './pwa.css';
+@import './shapes.css';

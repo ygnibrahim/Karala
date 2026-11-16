@@ -17,6 +17,9 @@ const outputs = [
 ];
 
 for (const [name, size] of outputs) {
-  await sharp(svg, { density: 300 }).resize(size, size).png().toFile(fileURLToPath(new URL(name, outDir)));
+  await sharp(svg, { density: 300 })
+    .resize(size, size)
+    .png()
+    .toFile(fileURLToPath(new URL(name, outDir)));
   console.log('✓', name);
 }

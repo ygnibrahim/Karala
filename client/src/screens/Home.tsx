@@ -1,10 +1,10 @@
+import { AVATAR_COLORS, AVATAR_FACES } from '@shared';
 import { useState } from 'react';
-import { AVATAR_COLORS, AVATAR_FACES } from '../../../shared/protocol';
-import AvatarBadge from '../components/AvatarBadge';
-import InstallButton from '../components/InstallButton';
-import SoundToggle from '../components/SoundToggle';
-import { play } from '../sound';
-import type { Profile } from '../session';
+import AvatarBadge from '../components/common/AvatarBadge';
+import InstallButton from '../components/common/InstallButton';
+import SoundToggle from '../components/common/SoundToggle';
+import { play } from '../effects/sound';
+import type { Profile } from '../lib/session';
 
 interface Props {
   profile: Profile;
@@ -38,17 +38,22 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
 
       <div className="card home-card">
         <div className="avatar-picker">
-          <button className="icon-btn" onClick={() => cycleFace(-1)} aria-label="Önceki yüz">‹</button>
+          <button type="button" className="icon-btn" onClick={() => cycleFace(-1)} aria-label="Önceki yüz">
+            ‹
+          </button>
           <span key={profile.avatar.face + profile.avatar.color} className="bounce-in">
             <AvatarBadge avatar={profile.avatar} size={88} />
           </span>
-          <button className="icon-btn" onClick={() => cycleFace(1)} aria-label="Sonraki yüz">›</button>
+          <button type="button" className="icon-btn" onClick={() => cycleFace(1)} aria-label="Sonraki yüz">
+            ›
+          </button>
         </div>
         <div className="swatches">
           {AVATAR_COLORS.map((c) => (
             <button
+              type="button"
               key={c}
-              className={'swatch' + (c === profile.avatar.color ? ' active' : '')}
+              className={`swatch${c === profile.avatar.color ? ' active' : ''}`}
               style={{ background: c }}
               onClick={() => onProfile({ ...profile, avatar: { ...profile.avatar, color: c } })}
               aria-label={`Renk ${c}`}
@@ -68,19 +73,26 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
 
         {initialCode ? (
           <>
-            <button className="btn btn-primary btn-big" disabled={!nameOk || busy} onClick={() => onJoin(initialCode)}>
+            <button
+              type="button"
+              className="btn btn-primary btn-big"
+              disabled={!nameOk || busy}
+              onClick={() => onJoin(initialCode)}
+            >
               {initialCode} odasına katıl
             </button>
-            <button className="btn btn-ghost" disabled={!nameOk || busy} onClick={onCreate}>
+            <button type="button" className="btn btn-ghost" disabled={!nameOk || busy} onClick={onCreate}>
               Yoksa yeni oda kur
             </button>
           </>
         ) : (
           <>
-            <button className="btn btn-primary btn-big" disabled={!nameOk || busy} onClick={onCreate}>
+            <button type="button" className="btn btn-primary btn-big" disabled={!nameOk || busy} onClick={onCreate}>
               🎨 Oda Kur
             </button>
-            <div className="divider"><span>ya da</span></div>
+            <div className="divider">
+              <span>ya da</span>
+            </div>
             <div className="join-row">
               <input
                 className="input code-input"
@@ -90,7 +102,12 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
                 onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
                 onKeyDown={(e) => e.key === 'Enter' && nameOk && codeOk && onJoin(code)}
               />
-              <button className="btn btn-secondary" disabled={!nameOk || !codeOk || busy} onClick={() => onJoin(code)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={!nameOk || !codeOk || busy}
+                onClick={() => onJoin(code)}
+              >
                 Katıl
               </button>
             </div>
@@ -102,9 +119,15 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
       <InstallButton />
 
       <div className="how">
-        <div><b>1.</b> Oda kur, linki arkadaşlarına at</div>
-        <div><b>2.</b> Sırası gelen gizli kelimeyi çizer</div>
-        <div><b>3.</b> Diğerleri en hızlı tahmin etmeye çalışır</div>
+        <div>
+          <b>1.</b> Oda kur, linki arkadaşlarına at
+        </div>
+        <div>
+          <b>2.</b> Sırası gelen gizli kelimeyi çizer
+        </div>
+        <div>
+          <b>3.</b> Diğerleri en hızlı tahmin etmeye çalışır
+        </div>
       </div>
     </div>
   );

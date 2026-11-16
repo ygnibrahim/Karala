@@ -8,7 +8,8 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    autoDeploy: true
+    # Sadece GitHub Actions kontrolleri (CI) geçince yayına al.
+    autoDeployTrigger: checksPass
     envVars:
       - key: NODE_VERSION
         value: "22"

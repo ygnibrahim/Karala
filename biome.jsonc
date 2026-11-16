@@ -1,0 +1,64 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  // Biçimlendirme + lint kuralları tüm proje için tek yerde.
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["**", "!**/dist", "!client/android", "!**/*.min.js", "!package-lock.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 130
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "css": {
+    "formatter": { "enabled": true, "quoteStyle": "single" },
+    "linter": { "enabled": true }
+  },
+  "assist": {
+    "actions": { "source": { "organizeImports": "on" } }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": { "level": "error", "options": { "ignoreRestSiblings": true } }
+      },
+      "style": {
+        "useConst": "error",
+        "noNonNullAssertion": "error",
+        "useTemplate": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": { "level": "warn", "options": { "allow": ["warn", "error"] } }
+      },
+      "a11y": {
+        // Emoji ikonlu butonlar aria-label taşıyor; SVG'ler aria-hidden.
+        "noSvgWithoutTitle": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // Sunucunun giriş noktası başlarken konsola yazar.
+      "includes": ["server/src/index.ts"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
+    {
+      "includes": ["**/scripts/**", "**/test/**", "**/*.test.ts"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" }, "style": { "noNonNullAssertion": "off" } } }
+    }
+  ]
+}

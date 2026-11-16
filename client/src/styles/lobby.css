@@ -1,0 +1,107 @@
+/* Lobi */
+
+/* ---------- Lobi ---------- */
+.lobby {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.lobby-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+.lobby-head .btn-ghost {
+  color: var(--ink);
+}
+.room-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.room-code strong {
+  font-size: 2rem;
+  letter-spacing: 6px;
+  color: var(--bg1);
+}
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.lobby-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.lobby-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: #f8f7fd;
+}
+.lobby-players li .name {
+  flex: 1;
+  font-weight: 700;
+}
+.lobby-players li.offline {
+  opacity: 0.45;
+}
+.lobby-players li.empty-slot {
+  background: transparent;
+  border: 2px dashed var(--line);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.settings label.wide {
+  grid-column: 1 / -1;
+}
+.settings select:disabled,
+.settings textarea:disabled {
+  background: #f8f7fd;
+  color: var(--ink);
+  opacity: 1;
+}
+.waiting {
+  text-align: center;
+  font-weight: 700;
+  color: var(--bg1);
+  animation: pulse 1.6s infinite;
+}
+.lobby-chat {
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

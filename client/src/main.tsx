@@ -1,12 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { registerServiceWorker } from './pwa';
-import './styles.css';
+import { registerServiceWorker } from './lib/pwa';
+import './styles/index.css';
 
 registerServiceWorker();
 
-createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) throw new Error('#root bulunamadı');
+
+createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>,

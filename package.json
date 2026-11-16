@@ -9,11 +9,22 @@
     "dev": "concurrently -k -n sunucu,istemci -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w client",
     "start": "npm run start -w server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome check --write .",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "check": "npm run lint && npm run typecheck && npm test",
     "android:live": "npm run android:live -w client",
     "android:build": "npm run android:build -w client"
   },
   "devDependencies": {
-    "concurrently": "^10.0.7"
+    "@biomejs/biome": "^2.6.8",
+    "concurrently": "^10.0.7",
+    "socket.io-client": "^4.8.4",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
