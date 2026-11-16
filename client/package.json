@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "android:live": "cross-env CAP_LIVE_URL=http://10.0.2.2:5173 cap sync android && cap open android",
-    "android:build": "vite build && cap sync android && cap open android"
+    "android:build": "vite build && cap sync android && cap open android",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -23,6 +24,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "cross-env": "^10.1.0",
+    "sharp": "^0.35.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
   }

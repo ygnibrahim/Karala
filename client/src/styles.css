@@ -436,3 +436,25 @@ textarea { resize: vertical; }
   .side-players { overflow-x: auto; padding: 8px 4px 2px; margin: -8px 0 0; }
   .gain-float { top: -8px; right: 2px; font-size: 0.8rem; }
 }
+
+/* ---------- Uygulamayı yükle (PWA) ---------- */
+.install { margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 400px; width: 100%; }
+.btn-install { background: rgba(255, 255, 255, 0.95); color: var(--bg1); width: 100%; padding: 12px; font-size: 1.05rem; }
+.install-help {
+  margin: 0; background: rgba(255, 255, 255, 0.95); color: var(--ink); border-radius: 14px; padding: 10px 14px;
+  text-align: center; animation: pop 0.3s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+
+/* ---------- Şekil araçları ---------- */
+.board-preview { position: absolute; inset: 0; pointer-events: none; }
+.shapes { display: grid; grid-template-columns: repeat(3, 30px); gap: 4px; }
+.shape {
+  width: 30px; height: 26px; border-radius: 7px; border: 2px solid var(--line); background: #fff;
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+}
+.shape.active { outline: 3px solid var(--ink); outline-offset: 1px; border-color: transparent; }
+@media (max-width: 820px) {
+  .shapes { grid-template-columns: repeat(3, 26px); gap: 3px; }
+  .shape { width: 26px; height: 22px; }
+  .shape svg { width: 17px; height: 17px; }
+}

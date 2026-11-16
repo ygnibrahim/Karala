@@ -1,6 +1,6 @@
 import type { Server, Socket } from 'socket.io';
 import {
-  applyOp, CANVAS_H, CANVAS_W, CATEGORIES, DEFAULT_SETTINGS, DRAW_TIME_OPTIONS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS,
+  applyOp, CANVAS_H, CANVAS_W, CATEGORIES, SHAPE_KINDS, DEFAULT_SETTINGS, DRAW_TIME_OPTIONS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS,
   type Avatar, type ChatKind, type ChatMessage, type ClientToServer, type DrawItem, type DrawOp, type Phase,
   type RoomState, type ServerToClient, type Settings, type TurnResult,
 } from '../../shared/protocol';
@@ -492,6 +492,12 @@ function sanitizeOp(op: DrawOp): DrawOp | null {
     case 'fill': {
       const x = num(op.x, CANVAS_W - 1), y = num(op.y, CANVAS_H - 1), c = color(op.color);
       return x !== null && y !== null && c ? { t: 'fill', color: c, x, y } : null;
+    }
+    case 'shape': {
+      const x1 = num(op.x1, CANVAS_W), y1 = num(op.y1, CANVAS_H), x2 = num(op.x2, CANVAS_W), y2 = num(op.y2, CANVAS_H);
+      const c = color(op.color), size = num(op.size, 80);
+      if (x1 === null || y1 === null || x2 === null || y2 === null || !c || !size || !SHAPE_KINDS.includes(op.shape)) return null;
+      return { t: 'shape', shape: op.shape, color: c, size, x1, y1, x2, y2 };
     }
     case 'undo':
       return { t: 'undo' };

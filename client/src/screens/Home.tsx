@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AVATAR_COLORS, AVATAR_FACES } from '../../../shared/protocol';
 import AvatarBadge from '../components/AvatarBadge';
+import InstallButton from '../components/InstallButton';
 import SoundToggle from '../components/SoundToggle';
 import { play } from '../sound';
 import type { Profile } from '../session';
@@ -97,6 +98,8 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
         )}
         {!nameOk && <p className="muted small">Başlamak için bir takma ad yaz.</p>}
       </div>
+
+      <InstallButton />
 
       <div className="how">
         <div><b>1.</b> Oda kur, linki arkadaşlarına at</div>

@@ -92,16 +92,32 @@ export interface ChatMessage {
 export const CANVAS_W = 800;
 export const CANVAS_H = 600;
 
+export type ShapeKind = 'line' | 'rect' | 'ellipse' | 'triangle';
+export const SHAPE_KINDS: ShapeKind[] = ['line', 'rect', 'ellipse', 'triangle'];
+
+/** Şekil: (x1,y1) başlangıç, (x2,y2) bitiş köşesi. */
+export interface Shape {
+  shape: ShapeKind;
+  color: string;
+  size: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 export type DrawOp =
   | { t: 'start'; color: string; size: number; x: number; y: number }
   | { t: 'move'; pts: number[] }
   | { t: 'fill'; color: string; x: number; y: number }
+  | ({ t: 'shape' } & Shape)
   | { t: 'undo' }
   | { t: 'clear' };
 
 export type DrawItem =
   | { k: 'stroke'; color: string; size: number; pts: number[] }
-  | { k: 'fill'; color: string; x: number; y: number };
+  | { k: 'fill'; color: string; x: number; y: number }
+  | ({ k: 'shape' } & Shape);
 
 /** Bir çizim işlemini geçmişe uygular (yerinde değiştirir). İstemci ve sunucu aynı kuralı kullanır. */
 export function applyOp(items: DrawItem[], op: DrawOp): void {
@@ -117,6 +133,11 @@ export function applyOp(items: DrawItem[], op: DrawOp): void {
     case 'fill':
       items.push({ k: 'fill', color: op.color, x: op.x, y: op.y });
       break;
+    case 'shape': {
+      const { t: _t, ...shape } = op;
+      items.push({ k: 'shape', ...shape });
+      break;
+    }
     case 'undo':
       items.pop();
       break;
