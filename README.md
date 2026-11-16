@@ -3,6 +3,10 @@
 Arkadaşlarla oynanan çiz-tahmin et oyunu. Bir kişi çizer, diğerleri sohbetten tahmin eder.
 Tarayıcıda ve Android/iOS'ta aynı kodla çalışır.
 
+**▶ Hemen oyna: https://karala.onrender.com**
+
+> Ücretsiz sunucu 15 dk kullanılmazsa uyur; ilk açılış ~50 sn sürebilir.
+
 ## Klasör yapısı
 
 ```
@@ -73,6 +77,7 @@ npm run android:build
 
 - [x] Başlangıç sürümü: oda, lobi, çizim, tahmin, puan, kürsü
 - [x] Android projesi (Capacitor)
-- [ ] Sesler ve animasyonlar, QR ile katılma
-- [ ] Sunucuyu internete yayınlama (Render / Fly.io)
+- [x] Sesler ve animasyonlar
+- [x] İnternette yayın (Render, `main`'e her push otomatik yayınlanır)
+- [ ] QR ile katılma, APK dağıtımı
 - [ ] Takım modu, "Kırık Telefon" modu, herkese açık odalar
