@@ -52,11 +52,11 @@ export const RATE_LIMITS = {
 
 export const SCORING = {
   /** Tahmin eden: kalan süreye göre min..max arası puan. */
-  guessMin: 50,
-  guessMax: 300,
-  firstGuessBonus: 50,
+  guessMin: 10,
+  guessMax: 100,
+  firstGuessBonus: 20,
   /** Çizen: kelimeyi bilen her oyuncu için. */
-  drawerPerGuess: 60,
+  drawerPerGuess: 25,
 } as const;
 
 /** İpucu harflerinin açıldığı süre oranları. */

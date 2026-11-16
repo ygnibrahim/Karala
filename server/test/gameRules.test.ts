@@ -9,7 +9,7 @@ describe('guessPoints', () => {
   it('erken bilen daha çok puan alır, puan sınırlar içinde kalır', () => {
     expect(guessPoints(80_000, 80_000, false)).toBe(SCORING.guessMax);
     expect(guessPoints(0, 80_000, false)).toBe(SCORING.guessMin);
-    expect(guessPoints(40_000, 80_000, false)).toBe(175);
+    expect(guessPoints(40_000, 80_000, false)).toBe(Math.round((SCORING.guessMin + SCORING.guessMax) / 2));
   });
 
   it('ilk bilen bonus alır', () => {

@@ -78,8 +78,8 @@ Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki s
 ## Oyun kuralları (özet)
 
 - Her turda sırayla herkes bir kez çizer; çizen 3 kelimeden birini seçer (15 sn).
-- Tahmin eden: kalan süreye göre 50–300 puan, ilk bilen +50.
-- Çizen: kelimeyi bilen her oyuncu için +60.
+- Tahmin eden: kalan süreye göre 10–100 puan, ilk bilen +20.
+- Çizen: kelimeyi bilen her oyuncu için +25.
 - Süre ilerledikçe harf ipuçları açılır; bir harf farkla yazılan tahminlerde "çok yakın!" uyarısı çıkar.
 - Türkçe karakter şart değil: "ordek" = "ördek".
 - Herkes bilirse tur erken biter. Sayfayı yenileyen oyuncu 30 sn içinde kaldığı yerden devam eder.
