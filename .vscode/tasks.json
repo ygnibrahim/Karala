@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Karala: Başlat",
+      "detail": "Sunucu (3001) + arayüz (5173) birlikte çalışır",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "karala",
+        "pattern": { "regexp": "^__asla_eslesmez__$" },
+        "background": {
+          "beginsPattern": "> dev",
+          "endsPattern": "Karala sunucusu çalışıyor"
+        }
+      }
+    },
+    {
+      "label": "Karala: Android (canlı mod)",
+      "detail": "Android Studio'yu açar; önce 'Karala: Başlat' çalışıyor olmalı",
+      "type": "npm",
+      "script": "android:live",
+      "problemMatcher": []
+    },
+    {
+      "label": "Karala: Tip kontrolü",
+      "type": "npm",
+      "script": "typecheck",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

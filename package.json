@@ -1,0 +1,19 @@
+{
+  "name": "karala",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n sunucu,istemci -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "android:live": "npm run android:live -w client",
+    "android:build": "npm run android:build -w client"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}
