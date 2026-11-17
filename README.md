@@ -75,7 +75,12 @@ npm run android:build
 `main` dalına push → GitHub Actions (lint, tip, test, derleme, güvenlik taraması) → **geçerse** Render otomatik yayınlar.
 Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki sürüm: https://karala.onrender.com/health
 
-## Oyun kuralları (özet)
+## Oyun modları
+
+- **🎨 Klasik** (en az 2 kişi): Sırayla biri çizer, diğerleri sohbetten tahmin eder.
+- **📞 Kırık Telefon** (en az 3 kişi): Herkes aynı anda bir şey yazar → bir sonrakinin yazdığını çizer → bir sonrakinin çizimini tahmin eder… Sonunda zincirler adım adım gösterilir; en çok 😂 alan "Günün Komedyeni" olur.
+
+## Klasik mod kuralları (özet)
 
 - Her turda sırayla herkes bir kez çizer; çizen 3 kelimeden birini seçer (15 sn).
 - Tahmin eden: kalan süreye göre 5–50 puan, ilk bilen +10.
@@ -92,4 +97,5 @@ Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki s
 - [x] İnternette yayın (Render) + PWA (ana ekrana yüklenebilir)
 - [x] Klasör yapısı, kod kuralları, güvenlik sertleştirmesi ve testler, CI
 - [ ] QR ile katılma
-- [ ] Takım modu, "Kırık Telefon" modu, herkese açık odalar
+- [x] Kırık Telefon modu
+- [ ] Takım modu, Sahtekâr modu, herkese açık odalar

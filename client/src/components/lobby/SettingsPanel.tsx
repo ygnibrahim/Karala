@@ -3,6 +3,7 @@ import {
   CATEGORIES,
   CUSTOM_ONLY_CATEGORY,
   DRAW_TIME_OPTIONS,
+  GAME_MODES,
   LIMITS,
   MAX_PLAYER_OPTIONS,
   type PublicSettings,
@@ -31,21 +32,41 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
 
   const update = (patch: Partial<Settings>) => socket.emit('room:settings', patch);
   const customOnly = s.category === CUSTOM_ONLY_CATEGORY;
-  const canStart = connectedCount >= 2 && (!customOnly || s.customWordCount >= 3);
+  const mode = GAME_MODES.find((m) => m.id === s.mode) ?? GAME_MODES[0];
+  const telephone = s.mode === 'telephone';
+  const enoughPlayers = connectedCount >= mode.minPlayers;
+  const canStart = enoughPlayers && (!customOnly || s.customWordCount >= 3);
 
   return (
     <section className="card">
       <h2>Ayarlar {!isHost && <span className="muted small">(oda sahibi değiştirebilir)</span>}</h2>
+      <fieldset className="modes" aria-label="Oyun modu" disabled={!isHost}>
+        {GAME_MODES.map((m) => (
+          <button
+            type="button"
+            key={m.id}
+            className={`mode${m.id === s.mode ? ' active' : ''}`}
+            aria-pressed={m.id === s.mode}
+            onClick={() => update({ mode: m.id })}
+          >
+            <b>{m.name}</b>
+            <span>{m.description}</span>
+            <small>en az {m.minPlayers} oyuncu</small>
+          </button>
+        ))}
+      </fieldset>
       <div className="settings">
+        {!telephone && (
+          <NumberSelect
+            label="Tur sayısı"
+            value={s.rounds}
+            options={ROUND_OPTIONS}
+            disabled={!isHost}
+            onChange={(rounds) => update({ rounds })}
+          />
+        )}
         <NumberSelect
-          label="Tur sayısı"
-          value={s.rounds}
-          options={ROUND_OPTIONS}
-          disabled={!isHost}
-          onChange={(rounds) => update({ rounds })}
-        />
-        <NumberSelect
-          label="Çizim süresi"
+          label={telephone ? 'Çizim adımı süresi' : 'Çizim süresi'}
           value={s.drawTime}
           options={DRAW_TIME_OPTIONS}
           suffix=" sn"
@@ -53,7 +74,7 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
           onChange={(drawTime) => update({ drawTime })}
         />
         <label>
-          Kategori
+          {telephone ? 'Öneri kategorisi' : 'Kategori'}
           <select disabled={!isHost} value={s.category} onChange={(e) => update({ category: e.target.value })}>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
@@ -97,8 +118,10 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
       ) : (
         <p className="waiting">Oda sahibinin oyunu başlatması bekleniyor…</p>
       )}
-      {isHost && connectedCount < 2 && (
-        <p className="muted small center">Başlamak için en az 2 oyuncu gerekli. Davet linkini paylaş!</p>
+      {isHost && !enoughPlayers && (
+        <p className="muted small center">
+          {mode.name} için en az {mode.minPlayers} oyuncu gerekli. Davet linkini paylaş!
+        </p>
       )}
       {isHost && customOnly && s.customWordCount < 3 && (
         <p className="muted small center">Sadece özel kelimelerle oynamak için en az 3 kelime ekle.</p>

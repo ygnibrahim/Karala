@@ -31,6 +31,12 @@ export function stateFx(p: RoomState | null, room: RoomState, meId: string) {
       case 'drawing':
         play('drawStart');
         break;
+      case 'telephone':
+        play('yourTurn');
+        break;
+      case 'reveal':
+        play('allGuessed');
+        break;
       case 'turnEnd':
         if (!iJustGuessed) play(room.turnResult?.reason === 'allGuessed' ? 'allGuessed' : 'timeUp');
         break;
@@ -40,6 +46,13 @@ export function stateFx(p: RoomState | null, room: RoomState, meId: string) {
         vibrate([100, 50, 100, 50, 220]);
         break;
     }
+    return;
+  }
+
+  // Kırık Telefon: yeni adım başladı.
+  if (room.phase === 'telephone' && room.telephone && p.telephone && room.telephone.step !== p.telephone.step) {
+    play('turnStart');
+    vibrate(40);
     return;
   }
 

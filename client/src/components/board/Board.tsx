@@ -15,7 +15,20 @@ const MIN_POINT_DISTANCE = 2;
 
 type Point = [number, number];
 
-export default function Board({ canDraw, overlay }: { canDraw: boolean; overlay?: ReactNode }) {
+interface Props {
+  canDraw: boolean;
+  overlay?: ReactNode;
+  /** Çizim işlemlerinin nereye gönderileceği. Varsayılan: odadaki herkese (klasik mod). */
+  onOp?: (op: DrawOp) => void;
+}
+
+const sendToRoom = (op: DrawOp) => socket.emit('draw:op', op);
+
+export default function Board({ canDraw, overlay, onOp = sendToRoom }: Props) {
+  // Her çizimde güncel gönderim fonksiyonu kullanılsın (yeniden oluşturmadan).
+  const onOpRef = useRef(onOp);
+  onOpRef.current = onOp;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -66,7 +79,7 @@ export default function Board({ canDraw, overlay }: { canDraw: boolean; overlay?
 
   const flush = useCallback(() => {
     if (pendingRef.current.length === 0) return;
-    socket.emit('draw:op', { t: 'move', pts: pendingRef.current });
+    onOpRef.current({ t: 'move', pts: pendingRef.current });
     pendingRef.current = [];
   }, []);
 
@@ -74,7 +87,7 @@ export default function Board({ canDraw, overlay }: { canDraw: boolean; overlay?
     (op: DrawOp) => {
       flush();
       render(op);
-      socket.emit('draw:op', op);
+      onOpRef.current(op);
     },
     [flush, render],
   );

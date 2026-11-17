@@ -59,5 +59,20 @@ export const SCORING = {
   drawerPerGuess: 10,
 } as const;
 
+export const TELEPHONE = {
+  minPlayers: 3,
+  /** Zincir başına en fazla adım (kalabalık odada oyun çok uzamasın). */
+  maxSteps: 8,
+  writeMs: 40_000,
+  guessMs: 35_000,
+  // Çizim adımının süresi odanın "çizim süresi" ayarından gelir.
+  /** Süre bitince istemcilerin son hallerini göndermesi için kısa ek süre. */
+  graceMs: 1_500,
+  /** Herkes gönderince sonraki adıma geçmeden önceki kısa bekleme. */
+  nextStepDelayMs: 800,
+  /** Gösterimde oda sahibi ilerletmezse otomatik geçiş. */
+  revealAutoMs: 15_000,
+} as const;
+
 /** İpucu harflerinin açıldığı süre oranları. */
 export const HINT_THRESHOLDS = [0.5, 0.7, 0.85] as const;

@@ -32,6 +32,8 @@ server/src/
     drawOp.ts · player.ts · settings.ts
   game/
     Room.ts                 Tek odanın kuralları ve akışı (durum makinesi)
+    TelephoneGame.ts        Kırık Telefon modu (zincirler, adımlar, gösterim)
+    DrawingBuffer.ts        Bir tuvalin çizim geçmişi ve sınırları (iki mod da kullanır)
     RoomManager.ts          Açık odalar
     scoring.ts · hints.ts · wordPicker.ts · wordList.ts   (saf fonksiyonlar)
   utils/                    text.ts (temizleme, tahmin karşılaştırma) · random.ts

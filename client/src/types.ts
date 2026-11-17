@@ -1,4 +1,4 @@
-import type { ChatMessage, RoomState } from '@shared';
+import type { ChatMessage, RevealData, RoomState, TelephoneTask } from '@shared';
 
 /** Oyun ekranlarının ihtiyaç duyduğu ortak veri (App tarafından sağlanır). */
 export interface GameData {
@@ -13,5 +13,9 @@ export interface GameData {
   messages: ChatMessage[];
   /** Sadece oda sahibine: özel kelime listesi. */
   customWords: string[];
+  /** Kırık Telefon: bu oyuncunun şu anki görevi. */
+  task: TelephoneTask | null;
+  /** Kırık Telefon gösterimi: açık zincir. */
+  reveal: RevealData | null;
   leave: () => void;
 }

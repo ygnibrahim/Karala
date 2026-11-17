@@ -7,17 +7,22 @@ export default function GameEnd({ data }: { data: GameData }) {
   const ranked = [...room.players].sort((a, b) => b.score - a.score);
   const podium = [ranked[1], ranked[0], ranked[2]]; // 2. - 1. - 3. sırası
   const isHost = room.players.find((p) => p.id === meId)?.isHost;
+  const telephone = room.settings.mode === 'telephone';
+  // Kırık Telefon'da puan yerine aldığı 😂 sayısı gösterilir.
+  const unit = telephone ? '😂' : 'puan';
 
   return (
     <div className="end">
-      <h1 className="logo small">Oyun Bitti! 🏆</h1>
+      <h1 className="logo small">{telephone ? 'Günün Komedyeni 😂' : 'Oyun Bitti! 🏆'}</h1>
       <div className="podium">
         {podium.map((p, i) =>
           p ? (
             <div key={p.id} className={`step step-${[2, 1, 3][i]}`}>
               <AvatarBadge avatar={p.avatar} size={[64, 84, 56][i]} />
               <b>{p.name}</b>
-              <span>{p.score} puan</span>
+              <span>
+                {p.score} {unit}
+              </span>
               <div className="block">{['🥈', '🥇', '🥉'][i]}</div>
             </div>
           ) : (
@@ -34,7 +39,9 @@ export default function GameEnd({ data }: { data: GameData }) {
               <span>
                 {p.avatar.face} {p.name}
               </span>
-              <b>{p.score}</b>
+              <b>
+                {p.score} {telephone ? unit : ''}
+              </b>
             </li>
           ))}
         </ol>

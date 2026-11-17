@@ -48,12 +48,12 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
         fn(room, playerId, ...args);
       };
 
-    /** Reddedilen çizimden sonra çizenin ekranını sunucudaki geçmişle eşitler. */
-    const resyncDrawer = (r: Room) => {
+    /** Reddedilen çizimden sonra çizenin ekranını sunucudaki haliyle eşitler (sık tekrarlanmaz). */
+    const resync = (send: () => void) => {
       const now = Date.now();
       if (now - lastResync < RESYNC_INTERVAL_MS) return;
       lastResync = now;
-      r.sendHistory(socket);
+      send();
     };
 
     socket.on('room:create', (payload: JoinPayload, ack: (r: AckResult) => void) => {
@@ -122,8 +122,34 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       // Boya kovası her istemcide pahalı bir işlem: ayrıca sınırla.
       const allowed = limiter.take('draw') && (op.t !== 'fill' || limiter.take('fill'));
       if (!allowed) room.rejectDraw();
-      if (!allowed || !room.draw(socket, playerId, op)) resyncDrawer(room);
+      if (!allowed || !room.draw(socket, playerId, op)) resync(() => room?.sendHistory(socket));
     });
+
+    // ---- Kırık Telefon ----
+    socket.on(
+      'tp:submit',
+      asPlayer('action', (r, id, step: unknown, text: unknown) => {
+        if (!Number.isInteger(step)) return;
+        r.telephoneSubmit(id, step as number, text === undefined || text === null ? null : sanitizeChat(text));
+      }),
+    );
+    socket.on('tp:draw', (step: unknown, input: unknown) => {
+      if (!room || !playerId || !isActive() || !Number.isInteger(step)) return;
+      const op = sanitizeDrawOp(input);
+      if (!op) return;
+      const allowed = limiter.take('draw') && (op.t !== 'fill' || limiter.take('fill'));
+      if (!allowed) room.telephoneRejectDraw(playerId);
+      const id = playerId;
+      if (!allowed || !room.telephoneDraw(id, step as number, op)) resync(() => room?.telephoneResync(socket, id));
+    });
+    socket.on(
+      'tp:next',
+      asPlayer('action', (r, id) => r.telephoneNext(id)),
+    );
+    socket.on(
+      'tp:laugh',
+      asPlayer('action', (r, id) => r.telephoneLaugh(id)),
+    );
 
     socket.on('disconnect', () => {
       // Oyuncu bu arada başka bir bağlantıyla döndüyse dokunma.

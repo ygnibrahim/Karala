@@ -1,5 +1,5 @@
 // Oda sahibinin gönderdiği ayar değişikliklerini doğrular. Geçersiz alanlar yok sayılır.
-import { CATEGORIES, DRAW_TIME_OPTIONS, LIMITS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS, type Settings } from '@shared';
+import { CATEGORIES, DRAW_TIME_OPTIONS, GAME_MODES, LIMITS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS, type Settings } from '@shared';
 import { cleanText, normalizeGuess } from '../utils/text';
 
 const pick = (v: unknown, options: readonly number[]): number | undefined =>
@@ -22,6 +22,7 @@ export function applySettings(current: Settings, input: unknown, playerCount: nu
   const s = input as Record<string, unknown>;
   const next = { ...current };
 
+  if (GAME_MODES.some((m) => m.id === s.mode)) next.mode = s.mode as Settings['mode'];
   next.rounds = pick(s.rounds, ROUND_OPTIONS) ?? next.rounds;
   next.drawTime = pick(s.drawTime, DRAW_TIME_OPTIONS) ?? next.drawTime;
   const maxPlayers = pick(s.maxPlayers, MAX_PLAYER_OPTIONS);

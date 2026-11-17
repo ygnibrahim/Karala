@@ -3,13 +3,12 @@
 
 import {
   type Avatar,
-  applyOp,
   type ChatKind,
   type ChatMessage,
   type ClientToServer,
   DEFAULT_SETTINGS,
-  type DrawItem,
   type DrawOp,
+  GAME_MODES,
   type Phase,
   type ReactionKind,
   type RoomState,
@@ -18,18 +17,20 @@ import {
   type TurnResult,
 } from '@shared';
 import type { Server, Socket } from 'socket.io';
-import { SERVER_LIMITS, TIMING } from '../config';
+import { TIMING } from '../config';
 import { randomId, randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
 import { applySettings } from '../validation/settings';
+import { DrawingBuffer } from './DrawingBuffer';
 import { hintsDue, maskWord, maxHints, revealableIndexes } from './hints';
 import { DRAWER_POINTS_PER_GUESS, guessPoints } from './scoring';
+import { TelephoneGame } from './TelephoneGame';
 import { pickWords, wordPool } from './wordPicker';
 
 export type IO = Server<ClientToServer, ServerToClient>;
 export type GameSocket = Socket<ClientToServer, ServerToClient>;
 
-interface Player {
+export interface Player {
   /** Herkese açık kimlik (rastgele). */
   id: string;
   /** Gizli oturum anahtarı: yeniden bağlanırken oyuncuyu tanımak için. Asla yayınlanmaz. */
@@ -47,6 +48,7 @@ export type JoinResult = { ok: true; playerId: string } | { ok: false; error: st
 
 const isActiveTurn = (phase: Phase) => phase === 'choosing' || phase === 'drawing';
 const isInGame = (phase: Phase) => phase !== 'lobby' && phase !== 'gameEnd';
+const isTelephone = (phase: Phase) => phase === 'telephone' || phase === 'reveal';
 
 export class Room {
   players: Player[] = [];
@@ -63,10 +65,10 @@ export class Room {
   private phaseStart = 0;
   private deadline = 0;
   private ticker: NodeJS.Timeout | null = null;
-  private history: DrawItem[] = [];
-  private historyPoints = 0;
-  /** Son kabul edilen işlem bir çizgi başlangıcı mı? ('move' sadece açık çizgiye eklenir.) */
-  private strokeOpen = false;
+  /** Klasik modda odanın ortak tuvali. */
+  private canvas = new DrawingBuffer();
+  /** Kırık Telefon oyunu (sadece o modda). */
+  private telephone: TelephoneGame | null = null;
   private usedWords = new Set<string>();
   private turnGains: Record<string, number> = {};
   private turnResult: TurnResult | null = null;
@@ -143,6 +145,7 @@ export class Room {
       this.checkAllGuessed();
     }
     this.reassignHost();
+    this.telephone?.onPresenceChange();
     this.broadcastState();
   }
 
@@ -168,12 +171,14 @@ export class Room {
       this.checkEnoughPlayers();
       this.checkAllGuessed();
     }
+    this.telephone?.onPresenceChange();
     this.broadcastState();
   }
 
   /** Odanın zamanlayıcılarını durdurur (oda kapanırken). */
   dispose(): void {
     this.stopTicker();
+    this.telephone?.dispose();
     for (const p of this.players) if (p.leaveTimer) clearTimeout(p.leaveTimer);
   }
 
@@ -208,12 +213,20 @@ export class Room {
 
   start(playerId: string): void {
     if (playerId !== this.hostId || this.phase !== 'lobby') return;
-    if (this.connectedPlayers.length < 2) return;
+    const mode = GAME_MODES.find((m) => m.id === this.settings.mode) ?? GAME_MODES[0];
+    if (this.connectedPlayers.length < mode.minPlayers) {
+      this.system(`${mode.name} için en az ${mode.minPlayers} oyuncu gerekli.`);
+      return;
+    }
     if (wordPool(this.settings).length < 3) {
       this.system('Oyunu başlatmak için en az 3 kelime gerekli.');
       return;
     }
     for (const p of this.players) p.score = 0;
+    if (this.settings.mode === 'telephone') {
+      this.startTelephone();
+      return;
+    }
     this.usedWords.clear();
     this.round = 1;
     this.queue = this.connectedPlayers.map((p) => p.id);
@@ -234,12 +247,14 @@ export class Room {
 
   private backToLobby(): void {
     this.stopTicker();
+    this.telephone?.dispose();
+    this.telephone = null;
     this.phase = 'lobby';
     this.round = 0;
     this.drawerId = null;
     this.word = null;
     this.turnResult = null;
-    this.history = [];
+    this.canvas.reset();
     for (const p of this.players) {
       p.score = 0;
       p.guessed = false;
@@ -264,9 +279,7 @@ export class Room {
     this.drawerId = drawer.id;
     this.word = null;
     this.choices = pickWords(wordPool(this.settings), this.usedWords, 3);
-    this.history = [];
-    this.historyPoints = 0;
-    this.strokeOpen = false;
+    this.canvas.reset();
     this.turnGains = {};
     this.turnResult = null;
     for (const p of this.players) {
@@ -434,32 +447,19 @@ export class Room {
    * bu durumda çağıran, çizenin ekranını sunucudaki geçmişle yeniden eşitlemelidir.
    */
   draw(socket: GameSocket, playerId: string, op: DrawOp): boolean {
-    if (!this.canDraw(playerId)) return false;
-    if (op.t === 'move') {
-      // Başlangıcı reddedilmiş bir çizginin noktaları önceki çizgiye eklenmesin.
-      if (!this.strokeOpen || this.historyPoints + op.pts.length > SERVER_LIMITS.maxHistoryPoints) return false;
-      this.historyPoints += op.pts.length;
-    } else if (
-      (op.t === 'start' || op.t === 'fill' || op.t === 'shape') &&
-      this.history.length >= SERVER_LIMITS.maxHistoryItems
-    ) {
-      this.strokeOpen = false;
-      return false;
-    }
-    if (op.t !== 'move') this.strokeOpen = op.t === 'start';
-    applyOp(this.history, op);
+    if (!this.canDraw(playerId) || !this.canvas.apply(op)) return false;
     socket.to(this.code).emit('draw:op', op);
     return true;
   }
 
   /** İşlem odaya ulaşmadan reddedildi (ör. istek sınırı): açık çizgiyi kapat. */
   rejectDraw(): void {
-    this.strokeOpen = false;
+    this.canvas.reject();
   }
 
   /** Sunucudaki çizim geçmişini bir oyuncuya yeniden gönderir (ekranı eşitlemek için). */
   sendHistory(socket: GameSocket): void {
-    socket.emit('draw:history', this.history);
+    socket.emit('draw:history', this.canvas.items);
   }
 
   /** Socket'i odanın yayınlarından çıkarır (oyuncuya dokunmadan). */
@@ -472,10 +472,79 @@ export class Room {
     return this.findPlayer(playerId)?.socketId === socketId;
   }
 
+  // ---------- Kırık Telefon ----------
+
+  private startTelephone(): void {
+    this.stopTicker();
+    this.round = 1;
+    this.drawerId = null;
+    this.canvas.reset();
+    this.phase = 'telephone';
+    this.telephone = new TelephoneGame(
+      this.connectedPlayers.map((p) => p.id),
+      this.settings.drawTime * 1000,
+      {
+        find: (id) => this.findPlayer(id),
+        sendTask: (id, task) => {
+          const p = this.findPlayer(id);
+          if (p) this.emitTo(p, 'tp:task', task);
+        },
+        broadcastReveal: (data) => this.io.to(this.code).emit('tp:reveal', data),
+        changed: () => {
+          if (this.telephone) this.phase = this.telephone.phase === 'play' ? 'telephone' : 'reveal';
+          this.broadcastState();
+        },
+        randomPrompt: () => randomItem(wordPool(this.settings)),
+        finished: (laughs) => this.endTelephone(laughs),
+      },
+    );
+    this.system('Kırık Telefon başladı! Önce herkes bir şey yazsın ✍️');
+    this.telephone.start();
+  }
+
+  private endTelephone(laughs: Record<string, number>): void {
+    this.telephone?.dispose();
+    this.telephone = null;
+    for (const p of this.players) p.score = laughs[p.id] ?? 0;
+    this.phase = 'gameEnd';
+    const top = [...this.players].sort((a, b) => b.score - a.score)[0];
+    this.system(top && top.score > 0 ? `Günün Komedyeni: ${top.name} 😂` : 'Kırık Telefon bitti! 📞');
+    this.broadcastState();
+  }
+
+  /** `text` socket katmanında temizlenmiş olmalı (çizim adımında null). */
+  telephoneSubmit(playerId: string, step: number, text: string | null): void {
+    this.telephone?.submit(playerId, step, text);
+  }
+
+  /** Çizim adımında oyuncunun kendi tuvaline işlem; kabul edilmezse false. */
+  telephoneDraw(playerId: string, step: number, op: DrawOp): boolean {
+    return this.telephone?.draw(playerId, step, op) ?? false;
+  }
+
+  telephoneRejectDraw(playerId: string): void {
+    this.telephone?.rejectDraw(playerId);
+  }
+
+  /** Oyuncunun ekranını sunucudaki yarım çizimiyle eşitler. */
+  telephoneResync(socket: GameSocket, playerId: string): void {
+    const draft = this.telephone?.draftOf(playerId);
+    if (draft) socket.emit('draw:history', draft);
+  }
+
+  telephoneNext(playerId: string): void {
+    if (playerId === this.hostId) this.telephone?.next();
+  }
+
+  telephoneLaugh(playerId: string): void {
+    this.telephone?.laugh(playerId);
+  }
+
   // ---------- Yayın ----------
 
   publicState(): RoomState {
-    const timed = isInGame(this.phase);
+    const telephoneTiming = this.phase === 'telephone' ? this.telephone?.timing() : null;
+    const timed = isInGame(this.phase) && !isTelephone(this.phase);
     const { customWords, ...settings } = this.settings;
     return {
       code: this.code,
@@ -493,9 +562,10 @@ export class Room {
       round: this.round,
       drawerId: this.drawerId,
       hint: this.phase === 'drawing' && this.word ? maskWord(this.word, this.revealed) : null,
-      timeLeftMs: timed ? Math.max(0, this.deadline - Date.now()) : null,
-      phaseDurationMs: timed ? this.deadline - this.phaseStart : null,
+      timeLeftMs: telephoneTiming ? telephoneTiming.timeLeftMs : timed ? Math.max(0, this.deadline - Date.now()) : null,
+      phaseDurationMs: telephoneTiming ? telephoneTiming.durationMs : timed ? this.deadline - this.phaseStart : null,
       turnResult: this.phase === 'turnEnd' ? this.turnResult : null,
+      telephone: this.telephone && isTelephone(this.phase) ? this.telephone.publicState() : null,
     };
   }
 
@@ -505,7 +575,16 @@ export class Room {
 
   /** Yeni bağlanan/geri dönen oyuncuya sadece onu ilgilendiren bilgileri gönderir. */
   private sendPrivateState(socket: GameSocket, p: Player): void {
-    socket.emit('draw:history', this.history);
+    const draft = this.telephone?.draftOf(p.id);
+    socket.emit('draw:history', draft ?? this.canvas.items);
+    if (this.telephone && this.phase === 'telephone') {
+      const task = this.telephone.taskFor(p.id);
+      if (task) socket.emit('tp:task', task);
+    }
+    if (this.telephone && this.phase === 'reveal') {
+      const data = this.telephone.revealData();
+      if (data) socket.emit('tp:reveal', data);
+    }
     if (p.id === this.hostId) socket.emit('room:customWords', this.settings.customWords);
     if (this.phase === 'choosing' && p.id === this.drawerId) socket.emit('word:choices', this.choices);
     if (this.phase === 'drawing' && this.word && (p.id === this.drawerId || p.guessed)) {

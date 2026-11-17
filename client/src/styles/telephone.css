@@ -1,0 +1,258 @@
+/* Oyun modu seçimi (lobi) ve Kırık Telefon ekranları */
+
+/* ---------- Mod seçimi ---------- */
+.modes {
+  border: 0;
+  margin: 0 0 14px;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 2px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
+}
+.mode b {
+  font-size: 1.05rem;
+}
+.mode span {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.25;
+}
+.mode small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.mode.active {
+  border-color: var(--bg1);
+  background: #efeaff;
+}
+.modes:disabled .mode {
+  cursor: default;
+}
+.modes:disabled .mode:not(.active) {
+  opacity: 0.55;
+}
+
+/* ---------- Kırık Telefon yerleşimi ---------- */
+.tp {
+  height: 100dvh;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  /* .topbar klasik ekrandan grid-area: top taşır */
+  grid-template-areas: 'top' 'main' 'bottom';
+}
+.tp-main {
+  grid-area: main;
+}
+.tp-players,
+.reveal-actions {
+  grid-area: bottom;
+  align-self: end;
+}
+.tp-title {
+  font-size: 1.3rem;
+}
+.tp-main {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tp-card {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: auto 0;
+  animation: pop 0.3s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.tp-card h2 {
+  margin: 0;
+}
+.tp-card p {
+  margin: 0;
+}
+.tp-input-row {
+  display: flex;
+  gap: 8px;
+}
+.tp-drawing {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: #fff;
+}
+.tp-draw {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+/* Tuval, araç çubuğu ve buton kaydırmadan sığsın: genişliği ekran yüksekliğine göre sınırla. */
+.tp-draw .board,
+.tp-draw .board-canvas-wrap,
+.tp-draw .toolbar,
+.tp-draw .btn-big {
+  width: min(100%, calc((100dvh - 420px) * 4 / 3));
+}
+.tp-draw .btn-big {
+  max-width: 560px;
+}
+.tp-prompt {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow);
+  font-size: 1.1rem;
+  text-align: center;
+}
+.tp-prompt strong {
+  color: var(--bg1);
+}
+.tp-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.tp-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg1);
+  animation: bob 1s ease-in-out infinite;
+}
+.tp-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.tp-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.tp-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.tp-players li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 3px 10px 3px 3px;
+  box-shadow: 0 3px 0 rgba(31, 27, 58, 0.15);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.tp-players li.done {
+  background: var(--ok-bg);
+}
+.tp-players li.me {
+  outline: 3px solid var(--secondary);
+}
+.tp-players li.offline {
+  opacity: 0.45;
+}
+
+/* ---------- Gösterim ---------- */
+.reveal-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 12px;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.reveal-item {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: revealIn 0.45s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+.reveal-author {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.reveal-text {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--ink);
+}
+.reveal-drawing {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+}
+.reveal-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px;
+}
+@keyframes revealIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+}
+
+@media (max-width: 820px) {
+  .modes {
+    grid-template-columns: 1fr;
+  }
+  .tp {
+    padding: 6px;
+    gap: 6px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+  .tp-title {
+    font-size: 1rem;
+  }
+  .reveal-text {
+    font-size: 1.15rem;
+  }
+}

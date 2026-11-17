@@ -1,5 +1,5 @@
 // Uygulamanın kökü: sunucu bağlantısını ve oyun durumunu yönetir, uygun ekranı gösterir.
-import type { AckResult, ChatMessage, JoinPayload, RoomState } from '@shared';
+import type { AckResult, ChatMessage, JoinPayload, RevealData, RoomState, TelephoneTask } from '@shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { messageFx, stateFx } from './effects/gameFx';
 import {
@@ -17,6 +17,8 @@ import Game from './screens/Game';
 import GameEnd from './screens/GameEnd';
 import Home from './screens/Home';
 import Lobby from './screens/Lobby';
+import Reveal from './screens/Reveal';
+import Telephone from './screens/Telephone';
 import type { GameData } from './types';
 
 /** Sohbette tutulan en fazla mesaj. */
@@ -32,6 +34,8 @@ export default function App() {
   const [secret, setSecret] = useState<string | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   const [customWords, setCustomWords] = useState<string[]>([]);
+  const [task, setTask] = useState<TelephoneTask | null>(null);
+  const [reveal, setReveal] = useState<RevealData | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +82,8 @@ export default function App() {
       setRoom(s);
       setStateAt(Date.now());
       if (s.phase === 'choosing' || s.phase === 'lobby') setSecret(null);
+      if (s.phase !== 'telephone') setTask(null);
+      if (s.phase !== 'reveal') setReveal(null);
     };
     const onMessage = (m: ChatMessage) => {
       messageFx(m);
@@ -91,6 +97,8 @@ export default function App() {
     socket.on('word:choices', setChoices);
     socket.on('word:secret', setSecret);
     socket.on('chat:message', onMessage);
+    socket.on('tp:task', setTask);
+    socket.on('tp:reveal', setReveal);
     if (socket.connected) onConnect();
     return () => {
       socket.off('connect', onConnect);
@@ -100,6 +108,8 @@ export default function App() {
       socket.off('word:choices', setChoices);
       socket.off('word:secret', setSecret);
       socket.off('chat:message', onMessage);
+      socket.off('tp:task', setTask);
+      socket.off('tp:reveal', setReveal);
     };
   }, [handleAck]);
 
@@ -137,9 +147,11 @@ export default function App() {
       />
     );
   } else {
-    const data: GameData = { room, stateAt, meId, secret, choices, messages, customWords, leave };
+    const data: GameData = { room, stateAt, meId, secret, choices, messages, customWords, task, reveal, leave };
     if (room.phase === 'lobby') screen = <Lobby data={data} />;
     else if (room.phase === 'gameEnd') screen = <GameEnd data={data} />;
+    else if (room.phase === 'telephone') screen = <Telephone data={data} />;
+    else if (room.phase === 'reveal') screen = <Reveal data={data} />;
     else screen = <Game data={data} />;
   }
 

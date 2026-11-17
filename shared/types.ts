@@ -1,6 +1,13 @@
 // Oda ve oyuncu durumunun tipleri.
+import type { DrawItem } from './drawing';
 
-export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'gameEnd';
+/**
+ * Klasik mod: choosing → drawing → turnEnd (tekrar) → gameEnd.
+ * Kırık Telefon: telephone (yaz/çiz/tahmin adımları) → reveal (zincirlerin gösterimi) → gameEnd.
+ */
+export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'telephone' | 'reveal' | 'gameEnd';
+
+export type GameMode = 'classic' | 'telephone';
 
 export interface Avatar {
   color: string;
@@ -19,6 +26,7 @@ export interface PublicPlayer {
 }
 
 export interface Settings {
+  mode: GameMode;
   rounds: number;
   drawTime: number;
   category: string;
@@ -53,6 +61,54 @@ export interface RoomState {
   /** Mevcut aşamanın toplam süresi (ms), zaman çubuğu için. */
   phaseDurationMs: number | null;
   turnResult: TurnResult | null;
+  /** Sadece Kırık Telefon modunda dolu. */
+  telephone: TelephonePublic | null;
+}
+
+// ---- Kırık Telefon ----
+
+export type TelephoneStepKind = 'write' | 'draw' | 'guess';
+
+/** Herkese açık Kırık Telefon durumu (içerik yok: kimse başkasının zincirini önceden görmez). */
+export interface TelephonePublic {
+  /** 0'dan başlayan adım numarası. */
+  step: number;
+  totalSteps: number;
+  kind: TelephoneStepKind;
+  /** Bu adımda gönderimini yapmış oyuncular. */
+  submitted: string[];
+  /** Zincirlere katılan oyuncular (oyun başındaki sıra). */
+  participants: string[];
+  /** Gösterim aşamasında: hangi zincirin kaçıncı adımı açık. */
+  reveal: { chain: number; entry: number; totalChains: number; chainLength: number } | null;
+  /** Oyuncu kimliği → aldığı 😂 sayısı. */
+  laughs: Record<string, number>;
+}
+
+/** Bir oyuncunun bu adımdaki görevi (sadece ona gönderilir). */
+export interface TelephoneTask {
+  step: number;
+  kind: TelephoneStepKind;
+  /** Çizim adımı: çizilecek metin. Tahmin adımı: tahmin edilecek çizim. Yazma adımı: boş. */
+  prompt: { text: string } | { drawing: DrawItem[] } | null;
+  /** Yazma adımında "fikrim yok" diyenler için öneri. */
+  suggestion?: string;
+  submitted: boolean;
+}
+
+export interface RevealEntry {
+  kind: 'text' | 'drawing';
+  authorId: string;
+  authorName: string;
+  text?: string;
+  drawing?: DrawItem[];
+}
+
+/** Gösterilen zincirin şu ana kadar açılmış adımları. */
+export interface RevealData {
+  chain: number;
+  ownerName: string;
+  entries: RevealEntry[];
 }
 
 export type ChatKind = 'chat' | 'system' | 'correct' | 'close' | 'insider';
