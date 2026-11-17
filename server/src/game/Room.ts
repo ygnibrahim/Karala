@@ -504,6 +504,12 @@ export class Room {
     socket.emit('draw:history', this.canvas.items);
   }
 
+  /** Oyuncunun ekranındaki tahtayı sunucudaki çizimle eşitler: Kırık Telefon'da kendi taslağı, diğerlerinde ortak tuval. */
+  syncDrawing(socket: GameSocket, playerId: string): void {
+    const draft = this.telephone?.draftOf(playerId);
+    socket.emit('draw:history', draft ?? this.canvas.items);
+  }
+
   /** Socket'i odanın yayınlarından çıkarır (oyuncuya dokunmadan). */
   leaveChannel(socket: GameSocket): void {
     socket.leave(this.code);

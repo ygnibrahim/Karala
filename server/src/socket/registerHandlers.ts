@@ -115,6 +115,11 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       }),
     );
 
+    socket.on(
+      'draw:sync',
+      asPlayer('action', (r, id) => r.syncDrawing(socket, id)),
+    );
+
     socket.on('draw:op', (input: unknown) => {
       if (!room || !playerId || !isActive() || !room.canDraw(playerId)) return;
       const op = sanitizeDrawOp(input);

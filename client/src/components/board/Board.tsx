@@ -115,6 +115,8 @@ export default function Board({ canDraw, overlay, onOp = sendToRoom, noEditing =
     };
     socket.on('draw:op', onOp);
     socket.on('draw:history', onHistory);
+    // Sayfa yenilendiyse çizim bu tahta ekrana gelmeden önce gönderilmiş olabilir: yeniden iste.
+    socket.emit('draw:sync');
     return () => {
       socket.off('draw:op', onOp);
       socket.off('draw:history', onHistory);

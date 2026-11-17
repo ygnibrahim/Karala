@@ -21,6 +21,8 @@ export interface ClientToServer {
   'game:restart': () => void;
   'word:choose': (index: number) => void;
   'draw:op': (op: DrawOp) => void;
+  /** Çizim tahtası ekrana gelince mevcut çizimi ister (sayfa yenilendiyse kaçırılmış olabilir). */
+  'draw:sync': () => void;
   'chat:send': (text: string) => void;
   react: (kind: ReactionKind) => void;
   /** Kırık Telefon: yazma/tahmin adımında metni, çizim adımında "bitti"yi gönderir. */

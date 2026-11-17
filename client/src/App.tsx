@@ -23,6 +23,9 @@ import Reveal from './screens/Reveal';
 import Telephone from './screens/Telephone';
 import type { GameData } from './types';
 
+/** Oda kurma/katılma isteğine bu sürede yanıt gelmezse vazgeçilir. */
+const ACK_TIMEOUT_MS = 10_000;
+
 /** Sohbette tutulan en fazla mesaj. */
 const MAX_MESSAGES = 150;
 
@@ -68,15 +71,26 @@ export default function App() {
       // Sayfa yenilendi ya da bağlantı koptuysa odaya otomatik geri dön.
       const code = getActiveRoom();
       if (!code) return;
-      socket.emit('room:join', { ...loadProfile(), sessionId, code }, (res: AckResult) => {
-        if (res.ok) return handleAck(res);
-        // Oda artık yok (ör. sunucu yeniden başladı): uyarı göstermeden ana ekrana dön.
+      // Kullanıcı başka bir odanın davet linkiyle geldiyse eski odaya dönme: davet öncelikli.
+      const invite = roomFromUrl();
+      if (invite && invite !== code) {
         setActiveRoom(null);
-        setUrlRoom(null);
-        setInviteCode(null);
-        setRoom(null);
-        lastState.current = null;
-      });
+        return;
+      }
+      socket
+        .timeout(ACK_TIMEOUT_MS)
+        .emit('room:join', { ...loadProfile(), sessionId, code }, (err: Error | null, res?: AckResult) => {
+          if (!err && res?.ok) return handleAck(res);
+          if (err) return; // yanıt gelmedi: bağlantı geri gelince yeniden denenir
+          // Oda artık yok (ör. sunucu yeniden başladı): uyarı göstermeden ana ekrana dön.
+          setActiveRoom(null);
+          if (roomFromUrl() === code) {
+            setUrlRoom(null);
+            setInviteCode(null);
+          }
+          setRoom(null);
+          lastState.current = null;
+        });
     };
     const onDisconnect = () => setConnected(false);
     const onState = (s: RoomState) => {
@@ -130,7 +144,12 @@ export default function App() {
     setBusy(true);
     setMessages([]);
     const payload: JoinPayload = { ...profile, sessionId, code };
-    socket.emit(mode === 'create' ? 'room:create' : 'room:join', payload, handleAck);
+    // Yanıt hiç gelmezse buton takılı kalmasın.
+    socket
+      .timeout(ACK_TIMEOUT_MS)
+      .emit(mode === 'create' ? 'room:create' : 'room:join', payload, (err: Error | null, res?: AckResult) => {
+        handleAck(err || !res ? { ok: false, error: 'Sunucuya ulaşılamadı, tekrar dene.' } : res);
+      });
   };
 
   const leave = () => {

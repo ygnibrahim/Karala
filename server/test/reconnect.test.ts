@@ -60,6 +60,18 @@ describe('klasik mod: kopma ve geri dönme', () => {
     expect(after.players.find((p) => p.id === dropperId)).toMatchObject({ connected: true, score: scoreBefore });
   });
 
+  it('tahta ekrana gelince istediği mevcut çizimi alır (sayfa yenileme sonrası)', async () => {
+    const game = await setupRoom(ts, 1);
+    const { drawer, guessers } = await startDrawing(game);
+    drawer.emit('draw:op', { t: 'start', color: '#000000', size: 5, x: 3, y: 4 });
+    drawer.emit('draw:op', { t: 'move', pts: [5, 6] });
+    await settle();
+    const viewer = guessers[0];
+    const synced = waitFor<DrawItem[]>(viewer, 'draw:history', (h) => h.length === 1);
+    viewer.emit('draw:sync');
+    expect((await synced)[0]).toMatchObject({ k: 'stroke', pts: [3, 4, 5, 6] });
+  });
+
   it('çizen kısa süre kopup dönerse tur bitmez ve kelimeyi yeniden alır', async () => {
     const game = await setupRoom(ts, 2);
     const { drawer, drawerId, word } = await startDrawing(game);
