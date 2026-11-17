@@ -49,6 +49,22 @@ export function stateFx(p: RoomState | null, room: RoomState, meId: string) {
     return;
   }
 
+  // Sahtekâr: aşama değişimleri ve sıranın bana gelmesi.
+  if (room.impostor && p.impostor) {
+    const now = room.impostor;
+    const before = p.impostor;
+    if (now.stage !== before.stage || now.round !== before.round) {
+      if (now.stage === 'intro') play('yourTurn');
+      else if (now.stage === 'vote') play('turnStart');
+      else if (now.stage === 'result') play(now.result?.caught && !now.result.guessedRight ? 'allGuessed' : 'timeUp');
+    }
+    if (now.stage === 'draw' && now.turnPlayerId === meId && before.turnPlayerId !== meId) {
+      play('yourTurn');
+      vibrate([60, 40, 60]);
+    }
+    return;
+  }
+
   // Kırık Telefon: yeni adım başladı.
   if (room.phase === 'telephone' && room.telephone && p.telephone && room.telephone.step !== p.telephone.step) {
     play('turnStart');

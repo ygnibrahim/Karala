@@ -151,6 +151,25 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       asPlayer('action', (r, id) => r.telephoneLaugh(id)),
     );
 
+    // ---- Sahtekâr ----
+    socket.on(
+      'imp:done',
+      asPlayer('action', (r, id) => r.impostorDone(id)),
+    );
+    socket.on(
+      'imp:vote',
+      asPlayer('action', (r, id, target: unknown) => {
+        if (typeof target === 'string') r.impostorVote(id, target);
+      }),
+    );
+    socket.on(
+      'imp:guess',
+      asPlayer('action', (r, id, text: unknown) => {
+        const clean = sanitizeChat(text);
+        if (clean) r.impostorGuess(id, clean);
+      }),
+    );
+
     socket.on('disconnect', () => {
       // Oyuncu bu arada başka bir bağlantıyla döndüyse dokunma.
       if (room && playerId && isActive()) room.disconnect(playerId);

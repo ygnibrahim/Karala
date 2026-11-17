@@ -20,11 +20,15 @@ interface Props {
   overlay?: ReactNode;
   /** Çizim işlemlerinin nereye gönderileceği. Varsayılan: odadaki herkese (klasik mod). */
   onOp?: (op: DrawOp) => void;
+  /** Geri alma ve temizleme gizlensin (Sahtekâr: başkasının çizimini silemesin). */
+  noEditing?: boolean;
+  /** Bir çizgi, şekil ya da boya hamlesi bitince çağrılır. */
+  onStrokeEnd?: () => void;
 }
 
 const sendToRoom = (op: DrawOp) => socket.emit('draw:op', op);
 
-export default function Board({ canDraw, overlay, onOp = sendToRoom }: Props) {
+export default function Board({ canDraw, overlay, onOp = sendToRoom, noEditing = false, onStrokeEnd }: Props) {
   // Her çizimde güncel gönderim fonksiyonu kullanılsın (yeniden oluşturmadan).
   const onOpRef = useRef(onOp);
   onOpRef.current = onOp;
@@ -163,6 +167,7 @@ export default function Board({ canDraw, overlay, onOp = sendToRoom }: Props) {
     const [x, y] = toCanvas(e);
     if (tool === 'fill') {
       send({ t: 'fill', color, x, y });
+      onStrokeEnd?.();
       return;
     }
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -202,12 +207,16 @@ export default function Board({ canDraw, overlay, onOp = sendToRoom }: Props) {
     if (s) {
       clearPreview();
       // Neredeyse sıfır boyutlu şekilleri (yanlışlıkla dokunma) yok say
-      if (Math.abs(s.x2 - s.x1) + Math.abs(s.y2 - s.y1) >= 4) send({ t: 'shape', ...s });
+      if (Math.abs(s.x2 - s.x1) + Math.abs(s.y2 - s.y1) >= 4) {
+        send({ t: 'shape', ...s });
+        onStrokeEnd?.();
+      }
       return;
     }
     if (!drawingRef.current) return;
     drawingRef.current = false;
     flush();
+    onStrokeEnd?.();
   };
 
   const clearAll = () => {
@@ -242,6 +251,7 @@ export default function Board({ canDraw, overlay, onOp = sendToRoom }: Props) {
           onSize={setSize}
           onUndo={() => send({ t: 'undo' })}
           onClear={clearAll}
+          noEditing={noEditing}
         />
       )}
     </div>

@@ -4,10 +4,11 @@ import type { DrawItem } from './drawing';
 /**
  * Klasik mod: choosing → drawing → turnEnd (tekrar) → gameEnd.
  * Kırık Telefon: telephone (yaz/çiz/tahmin adımları) → reveal (zincirlerin gösterimi) → gameEnd.
+ * Sahtekâr: impostor (aşamaları ImpostorPublic.stage'de) → gameEnd.
  */
-export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'telephone' | 'reveal' | 'gameEnd';
+export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'telephone' | 'reveal' | 'impostor' | 'gameEnd';
 
-export type GameMode = 'classic' | 'telephone';
+export type GameMode = 'classic' | 'telephone' | 'impostor';
 
 export interface Avatar {
   color: string;
@@ -63,6 +64,8 @@ export interface RoomState {
   turnResult: TurnResult | null;
   /** Sadece Kırık Telefon modunda dolu. */
   telephone: TelephonePublic | null;
+  /** Sadece Sahtekâr modunda dolu. */
+  impostor: ImpostorPublic | null;
 }
 
 // ---- Kırık Telefon ----
@@ -109,6 +112,49 @@ export interface RevealData {
   chain: number;
   ownerName: string;
   entries: RevealEntry[];
+}
+
+// ---- Sahtekâr ----
+
+/** intro: roller gösterilir · draw: sırayla tek çizgi · vote: oylama · guess: yakalanan sahtekâr kelimeyi tahmin eder · result: sonuç */
+export type ImpostorStage = 'intro' | 'draw' | 'vote' | 'guess' | 'result';
+
+export interface ImpostorResult {
+  impostorId: string;
+  word: string;
+  /** Oy veren → oy verilen. */
+  votes: Record<string, string>;
+  caught: boolean;
+  guess: string | null;
+  guessedRight: boolean;
+  gains: Record<string, number>;
+}
+
+/** Herkese açık Sahtekâr durumu: sahtekârın kim olduğu ve kelime sonuç aşamasına kadar yoktur. */
+export interface ImpostorPublic {
+  round: number;
+  totalRounds: number;
+  stage: ImpostorStage;
+  /** Bu turun çizim sırası. */
+  order: string[];
+  /** Sırası gelen oyuncu (çizim aşamasında). */
+  turnPlayerId: string | null;
+  /** Kaçıncı tur dönüş (1'den başlar). */
+  lap: number;
+  totalLaps: number;
+  /** Kelimenin kategorisi: herkes görür (sahtekârın tek ipucu). */
+  category: string;
+  /** Oy vermiş oyuncular (kime verdiği gizli). */
+  voted: string[];
+  result: ImpostorResult | null;
+}
+
+/** Oyuncuya özel rol bilgisi. Sahtekâra kelime gönderilmez. */
+export interface ImpostorRole {
+  round: number;
+  isImpostor: boolean;
+  word: string | null;
+  category: string;
 }
 
 export type ChatKind = 'chat' | 'system' | 'correct' | 'close' | 'insider';

@@ -33,6 +33,7 @@ server/src/
   game/
     Room.ts                 Tek odanın kuralları ve akışı (durum makinesi)
     TelephoneGame.ts        Kırık Telefon modu (zincirler, adımlar, gösterim)
+    ImpostorGame.ts         Sahtekâr modu (roller, sırayla çizgi, oylama, tahmin)
     DrawingBuffer.ts        Bir tuvalin çizim geçmişi ve sınırları (iki mod da kullanır)
     RoomManager.ts          Açık odalar
     scoring.ts · hints.ts · wordPicker.ts · wordList.ts   (saf fonksiyonlar)
@@ -83,6 +84,7 @@ lobby ──start──▶ choosing ──kelime seçildi / 15 sn──▶ drawi
 | Başka oyuncunun yerine geçme     | Gizli oturum anahtarı (≥16 karakter, kriptografik) ile herkese açık oyuncu kimliği ayrı; anahtar hiç yayınlanmaz | `security.e2e` › kimlik ve oturum |
 | Eski bağlantının yayın dinlemesi | Aynı oturum yeni bağlantıyla dönünce eskisi odadan çıkarılır                                                     | `security.e2e`                    |
 | Kelimeyi önceden görme (hile)    | Kelime sadece çizene ve bilenlere gider; diğerlerine maskeli ipucu; özel kelime listesi sadece oda sahibine      | `security.e2e` › kelime gizliliği |
+| Sahtekâr'a kelimenin sızması     | Kelime sahtekâra ve herkese açık duruma gönderilmez; sohbette kelimeyi içeren mesaj engellenir                   | `impostor.test`                   |
 | Bilenlerin cevabı sızdırması     | Çizen + bilenlerin sohbeti sadece kendi aralarında                                                               | `security.e2e`                    |
 | Yetkisiz işlem                   | Ayar/başlatma sadece oda sahibi; çizim sadece sıradaki çizen                                                     | `security.e2e` › yetki            |
 | Bozuk/kötü niyetli veri          | Tüm girdiler doğrulanır: tip, aralık, renk biçimi, uzunluk, bilinmeyen alanlar atılır                            | `validation.test`                 |

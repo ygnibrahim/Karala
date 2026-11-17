@@ -65,14 +65,16 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
             onChange={(rounds) => update({ rounds })}
           />
         )}
-        <NumberSelect
-          label={telephone ? 'Çizim adımı süresi' : 'Çizim süresi'}
-          value={s.drawTime}
-          options={DRAW_TIME_OPTIONS}
-          suffix=" sn"
-          disabled={!isHost}
-          onChange={(drawTime) => update({ drawTime })}
-        />
+        {s.mode !== 'impostor' && (
+          <NumberSelect
+            label={telephone ? 'Çizim adımı süresi' : 'Çizim süresi'}
+            value={s.drawTime}
+            options={DRAW_TIME_OPTIONS}
+            suffix=" sn"
+            disabled={!isHost}
+            onChange={(drawTime) => update({ drawTime })}
+          />
+        )}
         <label>
           {telephone ? 'Öneri kategorisi' : 'Kategori'}
           <select disabled={!isHost} value={s.category} onChange={(e) => update({ category: e.target.value })}>

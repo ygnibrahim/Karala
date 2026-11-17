@@ -1,5 +1,5 @@
 // Ayarlara göre kelime havuzunu oluşturur ve tekrarsız kelime seçer.
-import { CUSTOM_ONLY_CATEGORY, type Settings } from '@shared';
+import { CATEGORIES, CUSTOM_ONLY_CATEGORY, type Settings } from '@shared';
 import { pickRandom } from '../utils/random';
 import { WORDS } from './wordList';
 
@@ -20,4 +20,12 @@ export function pickWords(pool: readonly string[], used: Set<string>, n: number)
     fresh = [...pool];
   }
   return pickRandom(fresh, n);
+}
+
+/** Kelimenin hangi kategoriden geldiği (Sahtekâr modunda sahtekârın tek ipucu). */
+export function categoryOf(word: string): string {
+  for (const [id, list] of Object.entries(WORDS)) {
+    if (id !== 'karisik' && list.includes(word)) return CATEGORIES.find((c) => c.id === id)?.name ?? 'Karışık';
+  }
+  return 'Özel kelime';
 }

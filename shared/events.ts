@@ -1,6 +1,6 @@
 // Socket.IO olaylarının imzaları: istemci ve sunucu bu sözleşmeye göre konuşur.
 import type { DrawItem, DrawOp } from './drawing';
-import type { Avatar, ChatMessage, ReactionKind, RevealData, RoomState, Settings, TelephoneTask } from './types';
+import type { Avatar, ChatMessage, ImpostorRole, ReactionKind, RevealData, RoomState, Settings, TelephoneTask } from './types';
 
 export interface JoinPayload {
   name: string;
@@ -31,6 +31,12 @@ export interface ClientToServer {
   'tp:next': () => void;
   /** Kırık Telefon gösterimi: açık olan adıma 😂. */
   'tp:laugh': () => void;
+  /** Sahtekâr: sırası gelen oyuncu çizgisini bitirdi. */
+  'imp:done': () => void;
+  /** Sahtekâr: oylamada bir oyuncuyu seçer. */
+  'imp:vote': (targetId: string) => void;
+  /** Sahtekâr: yakalanan sahtekârın kelime tahmini. */
+  'imp:guess': (text: string) => void;
 }
 
 export interface ServerToClient {
@@ -47,4 +53,6 @@ export interface ServerToClient {
   'tp:task': (task: TelephoneTask) => void;
   /** Kırık Telefon gösterimi: açık zincirin içeriği. */
   'tp:reveal': (data: RevealData) => void;
+  /** Sahtekâr: bu oyuncunun bu turdaki rolü. */
+  'imp:role': (role: ImpostorRole) => void;
 }

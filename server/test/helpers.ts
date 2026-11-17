@@ -83,8 +83,8 @@ export function waitFor<T = unknown>(
   });
 }
 
-export const waitForState = (socket: Client, match: (s: RoomState) => boolean) => waitFor<RoomState>(socket, 'room:state', match);
-
+export const waitForState = (socket: Client, match: (s: RoomState) => boolean, ms = 3000) =>
+  waitFor<RoomState>(socket, 'room:state', match, ms);
 /** Olayların sunucuya ulaşıp işlenmesi için kısa bir bekleme. */
 export const settle = (ms = 150) => new Promise((r) => setTimeout(r, ms));
 
@@ -93,23 +93,26 @@ export const eventsOf = (socket: Client, event: string) => socket.log.filter((e)
 export interface Game {
   host: Client;
   hostId: string;
-  others: { socket: Client; id: string }[];
+  hostSession: string;
+  others: { socket: Client; id: string; sessionId: string }[];
   code: string;
 }
 
 /** Oda kurar, `extra` kadar oyuncu katar. */
 export async function setupRoom(ts: TestServer, extra: number): Promise<Game> {
   const host = await connectClient(ts);
-  const created = await create(host, payload('Ev Sahibi'));
+  const hostPayload = payload('Ev Sahibi');
+  const created = await create(host, hostPayload);
   if (!created.ok) throw new Error(created.error);
   const others: Game['others'] = [];
   for (let i = 0; i < extra; i++) {
     const socket = await connectClient(ts);
-    const joined = await join(socket, payload(`Oyuncu${i + 1}`, { code: created.code }));
+    const p = payload(`Oyuncu${i + 1}`, { code: created.code });
+    const joined = await join(socket, p);
     if (!joined.ok) throw new Error(joined.error);
-    others.push({ socket, id: joined.playerId });
+    others.push({ socket, id: joined.playerId, sessionId: p.sessionId });
   }
-  return { host, hostId: created.playerId, others, code: created.code };
+  return { host, hostId: created.playerId, hostSession: hostPayload.sessionId, others, code: created.code };
 }
 
 /** Oyunu başlatır, çizenin ilk kelimeyi seçmesini sağlar ve çizim aşamasına geçer. */
@@ -133,4 +136,19 @@ export async function startDrawing(game: Game): Promise<{ drawer: Client; drawer
     guessers: everyone.filter((p) => p !== drawerEntry).map((p) => p.socket),
     word,
   };
+}
+
+/** Bağlantı kopmasını canlandırır: eski socket kapanır, aynı oturumla yeni bağlantı kurulup odaya geri dönülür. */
+export async function reconnect(
+  ts: TestServer,
+  old: Client,
+  name: string,
+  sessionId: string,
+  code: string,
+): Promise<{ socket: Client; res: AckResult }> {
+  old.disconnect();
+  await settle(100);
+  const socket = await connectClient(ts);
+  const res = await join(socket, payload(name, { code, sessionId }));
+  return { socket, res };
 }

@@ -37,6 +37,12 @@ export const GAME_MODES: { id: GameMode; name: string; description: string; minP
     description: 'Herkes aynı anda yazar, çizer, tahmin eder; sonunda zincirler gösterilir.',
     minPlayers: 3,
   },
+  {
+    id: 'impostor',
+    name: '🕵️ Sahtekâr',
+    description: 'Biri kelimeyi bilmiyor! Sırayla birer çizgi çizin, sonra sahtekârı oylayın.',
+    minPlayers: 3,
+  },
 ];
 
 /** "Sadece özel kelimeler" kategorisinin kimliği. */
@@ -50,6 +56,13 @@ export const CATEGORIES: { id: string; name: string }[] = [
   { id: 'meslekler', name: 'Meslekler' },
   { id: 'yerler', name: 'Yerler & Doğa' },
   { id: 'eylemler', name: 'Eylemler' },
+  { id: 'tasitlar', name: 'Taşıtlar' },
+  { id: 'spor', name: 'Spor & Oyun' },
+  { id: 'vucut', name: 'Vücut & Kıyafet' },
+  { id: 'fantastik', name: 'Masal & Fantastik' },
+  { id: 'teknoloji', name: 'Teknoloji & Bilim' },
+  { id: 'muzik', name: 'Müzik & Sanat' },
+  { id: 'turkiye', name: "Türkiye'den" },
   { id: CUSTOM_ONLY_CATEGORY, name: 'Sadece özel kelimeler' },
 ];
 

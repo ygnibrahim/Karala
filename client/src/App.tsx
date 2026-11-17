@@ -1,7 +1,8 @@
 // Uygulamanın kökü: sunucu bağlantısını ve oyun durumunu yönetir, uygun ekranı gösterir.
-import type { AckResult, ChatMessage, JoinPayload, RevealData, RoomState, TelephoneTask } from '@shared';
+import type { AckResult, ChatMessage, ImpostorRole, JoinPayload, RevealData, RoomState, TelephoneTask } from '@shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { messageFx, stateFx } from './effects/gameFx';
+import { keepServerAwake, reconnectOnReturn } from './lib/connection';
 import {
   getActiveRoom,
   getSessionId,
@@ -16,6 +17,7 @@ import { socket } from './lib/socket';
 import Game from './screens/Game';
 import GameEnd from './screens/GameEnd';
 import Home from './screens/Home';
+import Impostor from './screens/Impostor';
 import Lobby from './screens/Lobby';
 import Reveal from './screens/Reveal';
 import Telephone from './screens/Telephone';
@@ -36,6 +38,7 @@ export default function App() {
   const [customWords, setCustomWords] = useState<string[]>([]);
   const [task, setTask] = useState<TelephoneTask | null>(null);
   const [reveal, setReveal] = useState<RevealData | null>(null);
+  const [role, setRole] = useState<ImpostorRole | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export default function App() {
       if (s.phase === 'choosing' || s.phase === 'lobby') setSecret(null);
       if (s.phase !== 'telephone') setTask(null);
       if (s.phase !== 'reveal') setReveal(null);
+      if (s.phase !== 'impostor') setRole(null);
     };
     const onMessage = (m: ChatMessage) => {
       messageFx(m);
@@ -99,6 +103,7 @@ export default function App() {
     socket.on('chat:message', onMessage);
     socket.on('tp:task', setTask);
     socket.on('tp:reveal', setReveal);
+    socket.on('imp:role', setRole);
     if (socket.connected) onConnect();
     return () => {
       socket.off('connect', onConnect);
@@ -110,8 +115,15 @@ export default function App() {
       socket.off('chat:message', onMessage);
       socket.off('tp:task', setTask);
       socket.off('tp:reveal', setReveal);
+      socket.off('imp:role', setRole);
     };
   }, [handleAck]);
+
+  useEffect(() => reconnectOnReturn(), []);
+
+  // Odadayken sunucu uyumasın.
+  const inRoom = room !== null;
+  useEffect(() => (inRoom ? keepServerAwake() : undefined), [inRoom]);
 
   const enter = (mode: 'create' | 'join', code?: string) => {
     saveProfile(profile);
@@ -147,11 +159,12 @@ export default function App() {
       />
     );
   } else {
-    const data: GameData = { room, stateAt, meId, secret, choices, messages, customWords, task, reveal, leave };
+    const data: GameData = { room, stateAt, meId, secret, choices, messages, customWords, task, reveal, role, leave };
     if (room.phase === 'lobby') screen = <Lobby data={data} />;
     else if (room.phase === 'gameEnd') screen = <GameEnd data={data} />;
     else if (room.phase === 'telephone') screen = <Telephone data={data} />;
     else if (room.phase === 'reveal') screen = <Reveal data={data} />;
+    else if (room.phase === 'impostor') screen = <Impostor data={data} />;
     else screen = <Game data={data} />;
   }
 

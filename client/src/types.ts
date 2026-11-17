@@ -1,4 +1,4 @@
-import type { ChatMessage, RevealData, RoomState, TelephoneTask } from '@shared';
+import type { ChatMessage, ImpostorRole, RevealData, RoomState, TelephoneTask } from '@shared';
 
 /** Oyun ekranlarının ihtiyaç duyduğu ortak veri (App tarafından sağlanır). */
 export interface GameData {
@@ -17,5 +17,7 @@ export interface GameData {
   task: TelephoneTask | null;
   /** Kırık Telefon gösterimi: açık zincir. */
   reveal: RevealData | null;
+  /** Sahtekâr: bu oyuncunun bu turdaki rolü. */
+  role: ImpostorRole | null;
   leave: () => void;
 }

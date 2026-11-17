@@ -9,5 +9,7 @@ export default defineConfig({
     include: ['server/test/**/*.test.ts', 'shared/**/*.test.ts'],
     environment: 'node',
     testTimeout: 10_000,
+    // Bağlantı kopma testlerinde gerçek süreleri (2 dk, 10 sn) beklememek için.
+    env: { RECONNECT_GRACE_MS: '1500', DRAWER_GRACE_MS: '800' },
   },
 });

@@ -11,9 +11,11 @@ interface Props {
   onSize: (s: number) => void;
   onUndo: () => void;
   onClear: () => void;
+  /** Geri alma ve temizleme butonlarını gizle. */
+  noEditing?: boolean;
 }
 
-export default function Toolbar({ tool, color, size, onTool, onColor, onSize, onUndo, onClear }: Props) {
+export default function Toolbar({ tool, color, size, onTool, onColor, onSize, onUndo, onClear, noEditing = false }: Props) {
   // Beyaz seçiliyken ikonlar görünsün diye gri göster.
   const iconColor = color === '#ffffff' ? '#adb5bd' : color;
 
@@ -88,10 +90,12 @@ export default function Toolbar({ tool, color, size, onTool, onColor, onSize, on
         <ToolButton active={tool === 'fill'} onClick={() => onTool('fill')} title="Boya kovası" icon="🪣" />
       </div>
 
-      <div className="tool-group">
-        <ToolButton onClick={onUndo} title="Geri al" icon="↶" />
-        <ToolButton onClick={onClear} title="Hepsini sil" icon="🗑️" />
-      </div>
+      {!noEditing && (
+        <div className="tool-group">
+          <ToolButton onClick={onUndo} title="Geri al" icon="↶" />
+          <ToolButton onClick={onClear} title="Hepsini sil" icon="🗑️" />
+        </div>
+      )}
     </div>
   );
 }

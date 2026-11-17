@@ -6,6 +6,7 @@ import {
   type ChatKind,
   type ChatMessage,
   type ClientToServer,
+  CUSTOM_ONLY_CATEGORY,
   DEFAULT_SETTINGS,
   type DrawOp,
   GAME_MODES,
@@ -23,9 +24,10 @@ import { isClose, normalizeGuess } from '../utils/text';
 import { applySettings } from '../validation/settings';
 import { DrawingBuffer } from './DrawingBuffer';
 import { hintsDue, maskWord, maxHints, revealableIndexes } from './hints';
+import { ImpostorGame } from './ImpostorGame';
 import { DRAWER_POINTS_PER_GUESS, guessPoints } from './scoring';
 import { TelephoneGame } from './TelephoneGame';
-import { pickWords, wordPool } from './wordPicker';
+import { categoryOf, pickWords, wordPool } from './wordPicker';
 
 export type IO = Server<ClientToServer, ServerToClient>;
 export type GameSocket = Socket<ClientToServer, ServerToClient>;
@@ -69,10 +71,14 @@ export class Room {
   private canvas = new DrawingBuffer();
   /** Kırık Telefon oyunu (sadece o modda). */
   private telephone: TelephoneGame | null = null;
+  /** Sahtekâr oyunu (sadece o modda). */
+  private impostor: ImpostorGame | null = null;
   private usedWords = new Set<string>();
   private turnGains: Record<string, number> = {};
   private turnResult: TurnResult | null = null;
   private msgId = 0;
+  /** Bağlantısı kopan çizenin dönmesini bekleyen zamanlayıcı. */
+  private drawerGraceTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly io: IO,
@@ -103,6 +109,7 @@ export class Room {
         this.io.in(previousSocket).socketsLeave(this.code);
       }
       player.socketId = socket.id;
+      if (player.id === this.drawerId) this.clearDrawerGrace();
       // Geri dönen oyuncu odadaki adını/avatarını korur.
       if (!previousSocket) this.system(`${player.name} geri döndü.`);
     } else {
@@ -137,8 +144,16 @@ export class Room {
     p.leaveTimer = setTimeout(() => this.remove(playerId), TIMING.reconnectGraceMs);
 
     if (p.id === this.drawerId && isActiveTurn(this.phase)) {
-      this.system(`${p.name} (çizen) bağlantıyı kaybetti.`);
-      this.endTurn('drawerLeft');
+      // Kısa kopmalarda (tünel, ağ değişimi) turu hemen bitirme: çizenin dönmesini bekle.
+      this.system(`${p.name} (çizen) bağlantıyı kaybetti, bekleniyor…`);
+      this.clearDrawerGrace();
+      this.drawerGraceTimer = setTimeout(() => {
+        this.drawerGraceTimer = null;
+        const drawer = this.drawerId ? this.findPlayer(this.drawerId) : undefined;
+        if (drawer && !drawer.socketId && isActiveTurn(this.phase)) {
+          this.endTurn('drawerLeft');
+        }
+      }, TIMING.drawerGraceMs);
     } else {
       // Oyuncu sayısını hemen kontrol etme: sayfayı yenileyen oyuncu birkaç saniyede döner.
       // Gerçekten ayrıldıysa süre dolunca remove() bunu halleder.
@@ -146,6 +161,7 @@ export class Room {
     }
     this.reassignHost();
     this.telephone?.onPresenceChange();
+    this.impostor?.onPresenceChange();
     this.broadcastState();
   }
 
@@ -172,14 +188,22 @@ export class Room {
       this.checkAllGuessed();
     }
     this.telephone?.onPresenceChange();
+    this.impostor?.onPresenceChange();
     this.broadcastState();
   }
 
   /** Odanın zamanlayıcılarını durdurur (oda kapanırken). */
   dispose(): void {
     this.stopTicker();
+    this.clearDrawerGrace();
     this.telephone?.dispose();
+    this.impostor?.dispose();
     for (const p of this.players) if (p.leaveTimer) clearTimeout(p.leaveTimer);
+  }
+
+  private clearDrawerGrace(): void {
+    if (this.drawerGraceTimer) clearTimeout(this.drawerGraceTimer);
+    this.drawerGraceTimer = null;
   }
 
   private reassignHost(): void {
@@ -227,6 +251,10 @@ export class Room {
       this.startTelephone();
       return;
     }
+    if (this.settings.mode === 'impostor') {
+      this.startImpostor();
+      return;
+    }
     this.usedWords.clear();
     this.round = 1;
     this.queue = this.connectedPlayers.map((p) => p.id);
@@ -247,8 +275,11 @@ export class Room {
 
   private backToLobby(): void {
     this.stopTicker();
+    this.clearDrawerGrace();
     this.telephone?.dispose();
     this.telephone = null;
+    this.impostor?.dispose();
+    this.impostor = null;
     this.phase = 'lobby';
     this.round = 0;
     this.drawerId = null;
@@ -322,6 +353,7 @@ export class Room {
 
   private endTurn(reason: TurnResult['reason']): void {
     if (!isActiveTurn(this.phase)) return;
+    this.clearDrawerGrace();
     const word = this.word ?? '';
     this.phase = 'turnEnd';
     this.turnResult = { word, drawerId: this.drawerId, gains: { ...this.turnGains }, reason };
@@ -380,6 +412,11 @@ export class Room {
     const p = this.findPlayer(playerId);
     if (!p) return;
 
+    if (this.impostor?.revealsWord(text)) {
+      this.emitTo(p, 'chat:message', this.msg('close', 'Kelimeyi yazamazsın, sahtekâr görür! 🤫'));
+      return;
+    }
+
     if (this.phase === 'drawing' && this.word) {
       // Çizen ve bilenler sadece kendi aralarında konuşur: kelime sızmasın.
       if (p.id === this.drawerId || p.guessed) {
@@ -424,7 +461,9 @@ export class Room {
 
   private checkAllGuessed(): void {
     if (this.phase !== 'drawing') return;
-    const guessers = this.connectedPlayers.filter((p) => p.id !== this.drawerId);
+    // Bağlantısı anlık kopanlar da tahmin edecek sayılır: kısa kopmada tur erkenden bitmesin.
+    // Gerçekten ayrılan oyuncu remove() ile listeden çıkar.
+    const guessers = this.players.filter((p) => p.id !== this.drawerId);
     if (guessers.length > 0 && guessers.every((p) => p.guessed)) this.endTurn('allGuessed');
   }
 
@@ -439,6 +478,7 @@ export class Room {
 
   /** Sadece sıradaki çizen, çizim aşamasında çizebilir. `op` doğrulanmış olmalı. */
   canDraw(playerId: string): boolean {
+    if (this.impostor) return this.impostor.isTurnOf(playerId);
     return this.phase === 'drawing' && playerId === this.drawerId;
   }
 
@@ -447,8 +487,10 @@ export class Room {
    * bu durumda çağıran, çizenin ekranını sunucudaki geçmişle yeniden eşitlemelidir.
    */
   draw(socket: GameSocket, playerId: string, op: DrawOp): boolean {
-    if (!this.canDraw(playerId) || !this.canvas.apply(op)) return false;
+    const allowed = this.impostor ? this.impostor.allowOp(playerId, op) : this.canDraw(playerId);
+    if (!allowed || !this.canvas.apply(op)) return false;
     socket.to(this.code).emit('draw:op', op);
+    this.impostor?.afterOp(op);
     return true;
   }
 
@@ -540,11 +582,79 @@ export class Room {
     this.telephone?.laugh(playerId);
   }
 
+  // ---------- Sahtekâr ----------
+
+  private startImpostor(): void {
+    this.stopTicker();
+    this.round = 1;
+    this.drawerId = null;
+    this.usedWords.clear();
+    this.phase = 'impostor';
+    this.impostor = new ImpostorGame(
+      this.connectedPlayers.map((p) => p.id),
+      this.settings.rounds,
+      {
+        find: (id) => this.findPlayer(id),
+        sendRole: (id, role) => {
+          const p = this.findPlayer(id);
+          if (p) this.emitTo(p, 'imp:role', role);
+        },
+        changed: () => {
+          if (this.impostor) this.round = this.impostor.round;
+          this.broadcastState();
+        },
+        newCanvas: () => {
+          this.canvas.reset();
+          this.io.to(this.code).emit('draw:history', []);
+        },
+        pickWord: () => {
+          const [word] = pickWords(wordPool(this.settings), this.usedWords, 1);
+          this.usedWords.add(word);
+          return { word, category: this.settings.category === CUSTOM_ONLY_CATEGORY ? 'Özel kelime' : categoryOf(word) };
+        },
+        award: (gains) => {
+          for (const [id, points] of Object.entries(gains)) {
+            const p = this.findPlayer(id);
+            if (p) p.score += points;
+          }
+        },
+        system: (text) => this.system(text),
+        finished: () => this.endImpostor(),
+      },
+    );
+    this.system('Sahtekâr başladı! Aranızda kelimeyi bilmeyen biri var 🕵️');
+    this.impostor.start();
+  }
+
+  private endImpostor(): void {
+    this.impostor?.dispose();
+    this.impostor = null;
+    this.phase = 'gameEnd';
+    this.round = this.settings.rounds;
+    const winner = [...this.players].sort((a, b) => b.score - a.score)[0];
+    if (winner) this.system(`Oyun bitti! Kazanan: ${winner.name} 🏆`);
+    this.broadcastState();
+  }
+
+  impostorDone(playerId: string): void {
+    this.impostor?.done(playerId);
+  }
+
+  impostorVote(playerId: string, targetId: string): void {
+    this.impostor?.vote(playerId, targetId);
+  }
+
+  /** `text` socket katmanında temizlenmiş olmalı. */
+  impostorGuess(playerId: string, text: string): void {
+    this.impostor?.guessWord(playerId, text);
+  }
+
   // ---------- Yayın ----------
 
   publicState(): RoomState {
-    const telephoneTiming = this.phase === 'telephone' ? this.telephone?.timing() : null;
-    const timed = isInGame(this.phase) && !isTelephone(this.phase);
+    const modeTiming =
+      this.phase === 'telephone' ? this.telephone?.timing() : this.phase === 'impostor' ? this.impostor?.timing() : null;
+    const timed = isInGame(this.phase) && !isTelephone(this.phase) && this.phase !== 'impostor';
     const { customWords, ...settings } = this.settings;
     return {
       code: this.code,
@@ -562,10 +672,11 @@ export class Room {
       round: this.round,
       drawerId: this.drawerId,
       hint: this.phase === 'drawing' && this.word ? maskWord(this.word, this.revealed) : null,
-      timeLeftMs: telephoneTiming ? telephoneTiming.timeLeftMs : timed ? Math.max(0, this.deadline - Date.now()) : null,
-      phaseDurationMs: telephoneTiming ? telephoneTiming.durationMs : timed ? this.deadline - this.phaseStart : null,
+      timeLeftMs: modeTiming ? modeTiming.timeLeftMs : timed ? Math.max(0, this.deadline - Date.now()) : null,
+      phaseDurationMs: modeTiming ? modeTiming.durationMs : timed ? this.deadline - this.phaseStart : null,
       turnResult: this.phase === 'turnEnd' ? this.turnResult : null,
       telephone: this.telephone && isTelephone(this.phase) ? this.telephone.publicState() : null,
+      impostor: this.impostor && this.phase === 'impostor' ? this.impostor.publicState() : null,
     };
   }
 
@@ -580,6 +691,10 @@ export class Room {
     if (this.telephone && this.phase === 'telephone') {
       const task = this.telephone.taskFor(p.id);
       if (task) socket.emit('tp:task', task);
+    }
+    if (this.impostor && this.phase === 'impostor') {
+      const role = this.impostor.roleFor(p.id);
+      if (role) socket.emit('imp:role', role);
     }
     if (this.telephone && this.phase === 'reveal') {
       const data = this.telephone.revealData();

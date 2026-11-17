@@ -159,7 +159,8 @@ export class TelephoneGame {
   }
 
   private advanceIfEveryoneDone(): void {
-    const active = this.order.filter((id) => this.hooks.find(id)?.socketId);
+    // Bağlantısı anlık kopanları da bekle (süre dolunca zaten ilerlenir); sadece odadan çıkanlar beklenmez.
+    const active = this.order.filter((id) => this.hooks.find(id));
     if (active.length > 0 && active.every((id) => this.submitted.has(id))) {
       this.schedule(TELEPHONE.nextStepDelayMs, () => this.endStep());
     }
