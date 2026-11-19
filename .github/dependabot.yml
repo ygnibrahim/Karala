@@ -1,0 +1,31 @@
+# Dependabot: paketleri ve GitHub Actions'ı haftalık kontrol edip güncelleme PR'ı açar.
+# Güvenlik açığı çıkan paketler için ayrıca hemen PR açılır (Settings → Advanced Security → Dependabot security updates).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Yeni çıkan bir sürümü hemen alma: ele geçirilmiş paketler genelde ilk günlerde fark edilip kaldırılır.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      gelistirme-araclari:
+        dependency-type: development
+        update-types: [minor, patch]
+      uygulama:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

@@ -8,8 +8,9 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
-    # Sadece GitHub Actions kontrolleri (CI) geçince yayına al.
-    autoDeployTrigger: checksPass
+    # Otomatik yayın kapalı: yayını sadece CI/CD hattı (pipeline.yml → yayin işi) tetikler,
+    # o da tüm güvenlik kontrolleri geçtikten ve "production" onayı verildikten sonra.
+    autoDeployTrigger: "off"
     envVars:
       - key: NODE_VERSION
         value: "22"

@@ -1,0 +1,224 @@
+# Karala CI/CD hattı
+#
+#   push (main) / PR / haftalık tarama
+#        │
+#        ├─ workflow-guvenligi  → zizmor: bu YAML dosyalarında güvenlik açığı var mı
+#        ├─ gizli-bilgi         → gitleaks: tüm git geçmişinde şifre/anahtar sızıntısı var mı
+#        ├─ kalite              → lint, tip, test, derleme
+#        ├─ tedarik-zinciri     → npm audit (tüm paketler) + paket imza doğrulaması
+#        ├─ codeql              → statik kod güvenlik analizi (SAST)
+#        ├─ bagimlilik-inceleme → (sadece PR) yeni eklenen paketlerde açık var mı
+#        │
+#        └─ yayin (sadece main'e push, hepsi geçerse)
+#             → "production" ortamı: GitHub'da onay ister (ayarlandıysa)
+#             → Render deploy hook ile tam bu commit'i yayınla
+#             → /health yeni sürümü gösterene kadar bekle
+#             → canlı sitede 3 modu uçtan uca dene (scripts/live-check.mjs)
+#
+# Güvenlik kuralları:
+#   - Tüm action'lar commit SHA'sına sabitlenmiştir (etiket değiştirilerek kötü kod sokulamaz).
+#   - GITHUB_TOKEN varsayılan olarak hiçbir yetkiye sahip değildir; her iş sadece gerekeni alır.
+#   - npm ci --ignore-scripts: paketlerin kurulum betikleri çalıştırılmaz.
+#   - checkout persist-credentials: false → token diske yazılmaz.
+#   - harden-runner: her işin dışarıya yaptığı ağ bağlantıları kayıt altına alınır.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Her pazartesi 06:00 (UTC): kod değişmese de yeni çıkan açıkları yakala.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  workflow-guvenligi:
+    name: Workflow güvenliği (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          persona: regular
+
+  gizli-bilgi:
+    name: Sızıntı taraması (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
+  kalite:
+    name: Kalite (lint, tip, test, derleme)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Kod stili (Biome)
+        run: npm run lint
+      - name: Tip kontrolü
+        run: npm run typecheck
+      - name: Testler
+        run: npm test
+      - name: Derleme
+        run: npm run build
+
+  tedarik-zinciri:
+    name: Bağımlılık güvenliği (npm audit + imzalar)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Bilinen açıklar (orta ve üzeri, geliştirme paketleri dahil)
+        run: npm audit --audit-level=moderate
+      - name: Paket imzaları ve kaynak doğrulaması
+        run: npm audit signatures
+
+  codeql:
+    name: Kod güvenlik analizi (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
+
+  bagimlilik-inceleme:
+    name: Yeni bağımlılık incelemesi
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: low
+
+  yayin:
+    name: Yayın (Render) + canlı test
+    needs: [workflow-guvenligi, gizli-bilgi, kalite, tedarik-zinciri, codeql]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    environment:
+      name: production
+      url: https://karala.onrender.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - run: npm ci --ignore-scripts
+      - name: Render'da bu commit'i yayınla
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL gizli değeri 'production' ortamında tanımlı değil."
+            exit 1
+          fi
+          curl -fsS -X POST "${DEPLOY_HOOK}&ref=${SHA}" -o /dev/null
+          echo "Yayın isteği gönderildi: ${SHA::7}"
+      - name: Yeni sürüm canlıya çıkana kadar bekle
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          want="${SHA::7}"
+          for i in $(seq 1 60); do
+            got=$(curl -fsS https://karala.onrender.com/health | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
+            if [ "$got" = "$want" ]; then echo "Canlıda: $got"; exit 0; fi
+            echo "Bekleniyor… (şu an: ${got:-yanıt yok})"
+            sleep 15
+          done
+          echo "::error::15 dakika içinde yeni sürüm canlıya çıkmadı."
+          exit 1
+      - name: Canlı sitede uçtan uca test
+        run: node scripts/live-check.mjs https://karala.onrender.com

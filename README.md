@@ -74,8 +74,9 @@ npm run android:build
 
 ## Yayına alma
 
-`main` dalına push → GitHub Actions (lint, tip, test, derleme, güvenlik taraması) → **geçerse** Render otomatik yayınlar.
-Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki sürüm: https://karala.onrender.com/health
+`main` dalına push → CI/CD hattı ([pipeline.yml](.github/workflows/pipeline.yml)): kalite + 5 güvenlik kontrolü
+([SECURITY.md](SECURITY.md)) → hepsi geçerse **production onayı** → Render'a tam o commit yayınlanır → canlı sitede uçtan uca test.
+Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümde kalır. Render'ın kendi otomatik yayını kapalıdır. Yayındaki sürüm: https://karala.onrender.com/health
 
 ## Oyun modları
 
