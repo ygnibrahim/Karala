@@ -14,7 +14,26 @@ export const AVATAR_COLORS = [
   '#adb5bd',
 ];
 
-export const AVATAR_FACES = ['😀', '😎', '🤓', '🥳', '😺', '🐶', '🦊', '🐸', '🐼', '🤖', '👻', '🦄', '🐵', '🐙', '🦁', '🐧'];
+export const AVATAR_FACES = [
+  '😀',
+  '😎',
+  '🤓',
+  '🥳',
+  '😺',
+  '🐶',
+  '🦊',
+  '🐸',
+  '🐼',
+  '🤖',
+  '👻',
+  '🦄',
+  '🐵',
+  '🐙',
+  '🦁',
+  '🐧',
+  '🧿',
+  '🐿️',
+];
 
 export const DEFAULT_SETTINGS: Settings = {
   mode: 'classic',
@@ -43,7 +62,16 @@ export const GAME_MODES: { id: GameMode; name: string; description: string; minP
     description: 'Biri kelimeyi bilmiyor! Sırayla birer çizgi çizin, sonra sahtekârı oylayın.',
     minPlayers: 3,
   },
+  {
+    id: 'teams',
+    name: '🏁 Çizim Yarışı',
+    description: 'İki takım aynı kelimeyi aynı anda çizer; ilk bilen takım turu alır.',
+    minPlayers: 4,
+  },
 ];
+
+export const TEAM_IDS = ['red', 'blue'] as const;
+export const TEAM_NAMES: Record<(typeof TEAM_IDS)[number], string> = { red: '🔴 Kırmızı', blue: '🔵 Mavi' };
 
 /** "Sadece özel kelimeler" kategorisinin kimliği. */
 export const CUSTOM_ONLY_CATEGORY = 'ozel';

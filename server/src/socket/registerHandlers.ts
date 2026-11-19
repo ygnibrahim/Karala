@@ -132,8 +132,9 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       if (!op) return;
       // Boya kovası her istemcide pahalı bir işlem: ayrıca sınırla.
       const allowed = limiter.take('draw') && (op.t !== 'fill' || limiter.take('fill'));
-      if (!allowed) room.rejectDraw();
-      if (!allowed || !room.draw(socket, playerId, op)) resync(() => room?.sendHistory(socket));
+      const id = playerId;
+      if (!allowed) room.rejectDraw(id);
+      if (!allowed || !room.draw(socket, id, op)) resync(() => room?.syncDrawing(socket, id));
     });
 
     // ---- Kırık Telefon ----
@@ -179,6 +180,18 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
         const clean = sanitizeChat(text);
         if (clean) r.impostorGuess(id, clean);
       }),
+    );
+
+    // ---- Çizim Yarışı ----
+    socket.on(
+      'team:join',
+      asPlayer('action', (r, id, team: unknown) => {
+        if (team === 'red' || team === 'blue') r.joinTeam(id, team);
+      }),
+    );
+    socket.on(
+      'team:shuffle',
+      asPlayer('action', (r, id) => r.shuffleTeams(id)),
     );
 
     socket.on('disconnect', () => {

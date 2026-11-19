@@ -4,6 +4,7 @@ import SoundToggle from '../components/common/SoundToggle';
 import Chat from '../components/game/Chat';
 import LobbyPlayers from '../components/lobby/LobbyPlayers';
 import SettingsPanel from '../components/lobby/SettingsPanel';
+import TeamPicker, { teamsReady } from '../components/lobby/TeamPicker';
 import { inviteLink } from '../lib/session';
 import type { GameData } from '../types';
 
@@ -11,6 +12,7 @@ export default function Lobby({ data }: { data: GameData }) {
   const { room, meId } = data;
   const isHost = !!room.players.find((p) => p.id === meId)?.isHost;
   const connectedCount = room.players.filter((p) => p.connected).length;
+  const teamMode = room.settings.mode === 'teams';
   const [copied, setCopied] = useState(false);
 
   const shareInvite = async () => {
@@ -47,8 +49,14 @@ export default function Lobby({ data }: { data: GameData }) {
       </header>
 
       <div className="lobby-grid">
-        <LobbyPlayers room={room} meId={meId} />
-        <SettingsPanel settings={room.settings} isHost={isHost} customWords={data.customWords} connectedCount={connectedCount} />
+        {teamMode ? <TeamPicker room={room} meId={meId} /> : <LobbyPlayers room={room} meId={meId} />}
+        <SettingsPanel
+          settings={room.settings}
+          isHost={isHost}
+          customWords={data.customWords}
+          connectedCount={connectedCount}
+          teamsReady={!teamMode || teamsReady(room)}
+        />
         <section className="card lobby-chat">
           <Chat data={data} />
         </section>

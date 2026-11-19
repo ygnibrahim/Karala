@@ -20,6 +20,7 @@ import Home from './screens/Home';
 import Impostor from './screens/Impostor';
 import Lobby from './screens/Lobby';
 import Reveal from './screens/Reveal';
+import TeamRace from './screens/TeamRace';
 import Telephone from './screens/Telephone';
 import type { GameData } from './types';
 
@@ -107,6 +108,8 @@ export default function App() {
     const onDisconnect = () => setConnected(false);
     const onState = (s: RoomState) => {
       stateFx(lastState.current, s, meIdRef.current);
+      // Takım modunda yeni tur: önceki turun kelimesi silinsin (yeni çizenlere kelime bu durumdan sonra gelir).
+      if (s.teams?.race && lastState.current?.teams?.race?.turn !== s.teams.race.turn) setSecret(null);
       lastState.current = s;
       setRoom(s);
       setStateAt(Date.now());
@@ -195,6 +198,7 @@ export default function App() {
     else if (room.phase === 'telephone') screen = <Telephone data={data} />;
     else if (room.phase === 'reveal') screen = <Reveal data={data} />;
     else if (room.phase === 'impostor') screen = <Impostor data={data} />;
+    else if (room.phase === 'teams') screen = <TeamRace data={data} />;
     else screen = <Game data={data} />;
   }
 

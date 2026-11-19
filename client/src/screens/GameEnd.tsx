@@ -1,3 +1,4 @@
+import { TEAM_NAMES } from '@shared';
 import AvatarBadge from '../components/common/AvatarBadge';
 import { socket } from '../lib/socket';
 import type { GameData } from '../types';
@@ -11,9 +12,28 @@ export default function GameEnd({ data }: { data: GameData }) {
   // Kırık Telefon'da puan yerine aldığı 😂 sayısı gösterilir.
   const unit = telephone ? '😂' : 'puan';
 
+  const teams = room.settings.mode === 'teams' ? room.teams : null;
+  const winnerTeam = teams
+    ? teams.score.red === teams.score.blue
+      ? null
+      : teams.score.red > teams.score.blue
+        ? 'red'
+        : 'blue'
+    : null;
+  const myTeam = teams?.members[meId];
+
   return (
     <div className="end">
       <h1 className="logo small">{telephone ? 'Günün Komedyeni 😂' : 'Oyun Bitti! 🏆'}</h1>
+      {teams && (
+        <div className={`card team-final${winnerTeam ? ` ${winnerTeam}` : ''}`}>
+          <b>{winnerTeam ? `${TEAM_NAMES[winnerTeam]} takım kazandı!${winnerTeam === myTeam ? ' 🎉' : ''}` : 'Berabere! 🤝'}</b>
+          <span className="team-final-score">
+            🔴 {teams.score.red} – {teams.score.blue} 🔵
+          </span>
+          <span className="muted small">En iyi oyuncular:</span>
+        </div>
+      )}
       <div className="podium">
         {podium.map((p, i) =>
           p ? (

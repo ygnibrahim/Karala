@@ -15,17 +15,22 @@ import {
   type RoomState,
   type ServerToClient,
   type Settings,
+  TEAM_IDS,
+  TEAM_NAMES,
+  type TeamId,
+  type TeamsPublic,
   type TurnResult,
 } from '@shared';
 import type { Server, Socket } from 'socket.io';
-import { TIMING } from '../config';
-import { randomId, randomItem } from '../utils/random';
+import { TEAMS, TIMING } from '../config';
+import { pickRandom, randomId, randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
 import { applySettings } from '../validation/settings';
 import { DrawingBuffer } from './DrawingBuffer';
 import { hintsDue, maskWord, maxHints, revealableIndexes } from './hints';
 import { ImpostorGame } from './ImpostorGame';
 import { DRAWER_POINTS_PER_GUESS, guessPoints } from './scoring';
+import { TeamRaceGame } from './TeamRaceGame';
 import { TelephoneGame } from './TelephoneGame';
 import { categoryOf, pickWords, wordPool } from './wordPicker';
 
@@ -73,6 +78,12 @@ export class Room {
   private telephone: TelephoneGame | null = null;
   /** Sahtekâr oyunu (sadece o modda). */
   private impostor: ImpostorGame | null = null;
+  /** Çizim Yarışı oyunu (sadece o modda). */
+  private teamRace: TeamRaceGame | null = null;
+  /** Oyuncu → takım. Her oyuncu katılınca bir takıma yerleşir; sadece takım modunda kullanılır. */
+  private teamOf = new Map<string, TeamId>();
+  /** Takım skorları: oyun sürerken ve oyun sonu ekranında. */
+  private teamScore: Record<TeamId, number> = { red: 0, blue: 0 };
   private usedWords = new Set<string>();
   private turnGains: Record<string, number> = {};
   private turnResult: TurnResult | null = null;
@@ -129,6 +140,7 @@ export class Room {
         leaveTimer: null,
       };
       this.players.push(player);
+      this.teamOf.set(player.id, this.smallerTeam());
       this.system(`${name} odaya katıldı.`);
     }
 
@@ -165,6 +177,7 @@ export class Room {
     this.reassignHost();
     this.telephone?.onPresenceChange();
     this.impostor?.onPresenceChange();
+    this.teamRace?.onPresenceChange();
     this.broadcastState();
   }
 
@@ -176,6 +189,7 @@ export class Room {
     socket?.leave(this.code);
     this.players = this.players.filter((x) => x.id !== playerId);
     this.queue = this.queue.filter((id) => id !== playerId);
+    this.teamOf.delete(playerId);
     this.system(reason === 'kicked' ? `${p.name} odadan çıkarıldı.` : `${p.name} odadan ayrıldı.`);
 
     if (this.players.length === 0) {
@@ -192,6 +206,7 @@ export class Room {
     }
     this.telephone?.onPresenceChange();
     this.impostor?.onPresenceChange();
+    this.teamRace?.onPresenceChange();
     this.broadcastState();
   }
 
@@ -214,6 +229,7 @@ export class Room {
     this.clearDrawerGrace();
     this.telephone?.dispose();
     this.impostor?.dispose();
+    this.teamRace?.dispose();
     for (const p of this.players) if (p.leaveTimer) clearTimeout(p.leaveTimer);
   }
 
@@ -271,6 +287,10 @@ export class Room {
       this.startImpostor();
       return;
     }
+    if (this.settings.mode === 'teams') {
+      this.startTeams();
+      return;
+    }
     this.usedWords.clear();
     this.round = 1;
     this.queue = this.connectedPlayers.map((p) => p.id);
@@ -296,6 +316,9 @@ export class Room {
     this.telephone = null;
     this.impostor?.dispose();
     this.impostor = null;
+    this.teamRace?.dispose();
+    this.teamRace = null;
+    this.teamScore = { red: 0, blue: 0 };
     this.phase = 'lobby';
     this.round = 0;
     this.drawerId = null;
@@ -428,6 +451,11 @@ export class Room {
     const p = this.findPlayer(playerId);
     if (!p) return;
 
+    if (this.teamRace && this.phase === 'teams') {
+      this.teamChat(p, text);
+      return;
+    }
+
     if (this.impostor?.revealsWord(text)) {
       this.emitTo(p, 'chat:message', this.msg('close', 'Kelimeyi yazamazsın, sahtekâr görür! 🤫'));
       return;
@@ -495,6 +523,7 @@ export class Room {
   /** Sadece sıradaki çizen, çizim aşamasında çizebilir. `op` doğrulanmış olmalı. */
   canDraw(playerId: string): boolean {
     if (this.impostor) return this.impostor.isTurnOf(playerId);
+    if (this.teamRace) return this.teamRace.drawerTeam(playerId) !== null;
     return this.phase === 'drawing' && playerId === this.drawerId;
   }
 
@@ -503,6 +532,13 @@ export class Room {
    * bu durumda çağıran, çizenin ekranını sunucudaki geçmişle yeniden eşitlemelidir.
    */
   draw(socket: GameSocket, playerId: string, op: DrawOp): boolean {
+    if (this.teamRace) {
+      // Takım modunda çizim sadece çizenin kendi takımına gider.
+      const team = this.teamRace.draw(playerId, op);
+      if (!team) return false;
+      for (const p of this.teamMembers(team)) if (p.id !== playerId) this.emitTo(p, 'draw:op', op);
+      return true;
+    }
     const allowed = this.impostor ? this.impostor.allowOp(playerId, op) : this.canDraw(playerId);
     if (!allowed || !this.canvas.apply(op)) return false;
     socket.to(this.code).emit('draw:op', op);
@@ -511,19 +547,20 @@ export class Room {
   }
 
   /** İşlem odaya ulaşmadan reddedildi (ör. istek sınırı): açık çizgiyi kapat. */
-  rejectDraw(): void {
-    this.canvas.reject();
+  rejectDraw(playerId: string): void {
+    if (this.teamRace) this.teamRace.rejectDraw(playerId);
+    else this.canvas.reject();
   }
 
-  /** Sunucudaki çizim geçmişini bir oyuncuya yeniden gönderir (ekranı eşitlemek için). */
-  sendHistory(socket: GameSocket): void {
-    socket.emit('draw:history', this.canvas.items);
+  /** Oyuncunun görmesi gereken tuval: Kırık Telefon'da kendi taslağı, takım modunda takımının tuvali, diğerlerinde ortak tuval. */
+  private canvasFor(playerId: string) {
+    if (this.teamRace) return this.teamRace.canvasFor(this.teamOf.get(playerId));
+    return this.telephone?.draftOf(playerId) ?? this.canvas.items;
   }
 
-  /** Oyuncunun ekranındaki tahtayı sunucudaki çizimle eşitler: Kırık Telefon'da kendi taslağı, diğerlerinde ortak tuval. */
+  /** Oyuncunun ekranındaki tahtayı sunucudaki çizimle eşitler. */
   syncDrawing(socket: GameSocket, playerId: string): void {
-    const draft = this.telephone?.draftOf(playerId);
-    socket.emit('draw:history', draft ?? this.canvas.items);
+    socket.emit('draw:history', this.canvasFor(playerId));
   }
 
   /** Socket'i odanın yayınlarından çıkarır (oyuncuya dokunmadan). */
@@ -671,12 +708,148 @@ export class Room {
     this.impostor?.guessWord(playerId, text);
   }
 
+  // ---------- Çizim Yarışı (takım modu) ----------
+
+  /** Yeni gelen oyuncunun yerleşeceği takım: daha az kişi olan. */
+  private smallerTeam(): TeamId {
+    const count = (team: TeamId) => [...this.teamOf.values()].filter((t) => t === team).length;
+    return count('blue') < count('red') ? 'blue' : 'red';
+  }
+
+  private teamMembers(team: TeamId): Player[] {
+    return this.players.filter((p) => this.teamOf.get(p.id) === team);
+  }
+
+  /** Lobide oyuncu kendi takımını seçer. */
+  joinTeam(playerId: string, team: TeamId): void {
+    if (this.phase !== 'lobby' || !this.findPlayer(playerId) || this.teamOf.get(playerId) === team) return;
+    this.teamOf.set(playerId, team);
+    this.broadcastState();
+  }
+
+  /** Oda sahibi takımları rastgele ve dengeli dağıtır. */
+  shuffleTeams(playerId: string): void {
+    if (playerId !== this.hostId || this.phase !== 'lobby') return;
+    const shuffled = pickRandom(this.players, this.players.length);
+    shuffled.forEach((p, i) => {
+      this.teamOf.set(p.id, TEAM_IDS[i % 2]);
+    });
+    this.system('Takımlar karıştırıldı 🔀');
+    this.broadcastState();
+  }
+
+  private startTeams(): void {
+    const short = TEAM_IDS.find((team) => this.teamMembers(team).filter((p) => p.socketId).length < TEAMS.minPerTeam);
+    if (short) {
+      this.system(`Her takımda en az ${TEAMS.minPerTeam} oyuncu olmalı (${TEAM_NAMES[short]} eksik).`);
+      return;
+    }
+    this.stopTicker();
+    this.drawerId = null;
+    this.usedWords.clear();
+    this.canvas.reset();
+    this.teamScore = { red: 0, blue: 0 };
+    this.phase = 'teams';
+    const biggest = Math.max(...TEAM_IDS.map((team) => this.teamMembers(team).length));
+    this.teamRace = new TeamRaceGame(this.settings.rounds * biggest, this.settings.drawTime * 1000, {
+      find: (id) => this.findPlayer(id),
+      members: (team) => this.teamMembers(team).map((p) => p.id),
+      sendSecret: (id, word) => {
+        const p = this.findPlayer(id);
+        if (p) this.emitTo(p, 'word:secret', word);
+      },
+      sendHistory: (team, items) => {
+        for (const p of this.teamMembers(team)) this.emitTo(p, 'draw:history', items);
+      },
+      changed: () => {
+        if (this.teamRace) {
+          this.round = this.teamRace.turn;
+          this.teamScore = { ...this.teamRace.score };
+        }
+        this.broadcastState();
+      },
+      pickWord: () => {
+        const [word] = pickWords(wordPool(this.settings), this.usedWords, 1);
+        this.usedWords.add(word);
+        return word;
+      },
+      award: (id, points) => {
+        const p = this.findPlayer(id);
+        if (p) p.score += points;
+      },
+      system: (text) => this.system(text),
+      finished: (score) => this.endTeams(score),
+    });
+    this.system('Çizim Yarışı başladı! İlk bilen takım turu alır 🏁');
+    this.teamRace.start();
+  }
+
+  private endTeams(score: Record<TeamId, number>): void {
+    this.teamRace?.dispose();
+    this.teamRace = null;
+    this.teamScore = score;
+    this.phase = 'gameEnd';
+    const winner = score.red === score.blue ? null : score.red > score.blue ? 'red' : 'blue';
+    this.system(
+      winner
+        ? `Oyun bitti! ${TEAM_NAMES[winner]} takım kazandı 🏆 (${score.red}–${score.blue})`
+        : `Oyun bitti! Berabere 🤝 (${score.red}–${score.blue})`,
+    );
+    this.broadcastState();
+  }
+
+  /** Takım modunda sohbet: tahminler ve konuşmalar sadece kendi takımına gider. */
+  private teamChat(p: Player, text: string): void {
+    if (!this.teamRace) return;
+    const team = this.teamOf.get(p.id);
+    const action = this.teamRace.chat(p.id, team, text);
+    switch (action.kind) {
+      case 'all':
+        this.io.to(this.code).emit('chat:message', this.msg('chat', text, p));
+        break;
+      case 'team': {
+        const msg = this.msg('chat', text, p);
+        for (const other of this.teamMembers(action.team)) this.emitTo(other, 'chat:message', msg);
+        break;
+      }
+      case 'close':
+        this.emitTo(p, 'chat:message', this.msg('close', `"${text}" çok yakın!`));
+        break;
+      case 'blocked':
+        this.emitTo(p, 'chat:message', this.msg('close', 'Kelimeyi yazamazsın, çizerek anlat! ✏️'));
+        break;
+      case 'correct':
+        break;
+    }
+  }
+
+  private teamsState(): TeamsPublic | null {
+    if (this.settings.mode !== 'teams' && !this.teamRace) return null;
+    return {
+      members: Object.fromEntries(this.teamOf),
+      score: { ...this.teamScore },
+      race: this.teamRace && this.phase === 'teams' ? this.teamRace.publicState() : null,
+    };
+  }
+
   // ---------- Yayın ----------
 
   publicState(): RoomState {
     const modeTiming =
-      this.phase === 'telephone' ? this.telephone?.timing() : this.phase === 'impostor' ? this.impostor?.timing() : null;
-    const timed = isInGame(this.phase) && !isTelephone(this.phase) && this.phase !== 'impostor';
+      this.phase === 'telephone'
+        ? this.telephone?.timing()
+        : this.phase === 'impostor'
+          ? this.impostor?.timing()
+          : this.phase === 'teams'
+            ? this.teamRace?.timing()
+            : null;
+    const timed = isInGame(this.phase) && !isTelephone(this.phase) && this.phase !== 'impostor' && this.phase !== 'teams';
+    const hint =
+      this.phase === 'drawing' && this.word
+        ? maskWord(this.word, this.revealed)
+        : this.phase === 'teams'
+          ? (this.teamRace?.hint() ?? null)
+          : null;
     const { customWords, ...settings } = this.settings;
     return {
       code: this.code,
@@ -693,12 +866,13 @@ export class Room {
       settings: { ...settings, customWordCount: customWords.length },
       round: this.round,
       drawerId: this.drawerId,
-      hint: this.phase === 'drawing' && this.word ? maskWord(this.word, this.revealed) : null,
+      hint,
       timeLeftMs: modeTiming ? modeTiming.timeLeftMs : timed ? Math.max(0, this.deadline - Date.now()) : null,
       phaseDurationMs: modeTiming ? modeTiming.durationMs : timed ? this.deadline - this.phaseStart : null,
       turnResult: this.phase === 'turnEnd' ? this.turnResult : null,
       telephone: this.telephone && isTelephone(this.phase) ? this.telephone.publicState() : null,
       impostor: this.impostor && this.phase === 'impostor' ? this.impostor.publicState() : null,
+      teams: this.teamsState(),
     };
   }
 
@@ -708,8 +882,10 @@ export class Room {
 
   /** Yeni bağlanan/geri dönen oyuncuya sadece onu ilgilendiren bilgileri gönderir. */
   private sendPrivateState(socket: GameSocket, p: Player): void {
-    const draft = this.telephone?.draftOf(p.id);
-    socket.emit('draw:history', draft ?? this.canvas.items);
+    socket.emit('draw:history', this.canvasFor(p.id));
+    if (this.teamRace && this.phase === 'teams' && this.teamRace.isDrawerNow(p.id)) {
+      socket.emit('word:secret', this.teamRace.secretWord);
+    }
     if (this.telephone && this.phase === 'telephone') {
       const task = this.telephone.taskFor(p.id);
       if (task) socket.emit('tp:task', task);

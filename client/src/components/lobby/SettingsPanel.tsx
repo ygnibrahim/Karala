@@ -19,9 +19,11 @@ interface Props {
   /** Sadece oda sahibinde dolu gelir. */
   customWords: string[];
   connectedCount: number;
+  /** Takım modunda her iki takımda da yeterli oyuncu var mı (diğer modlarda true). */
+  teamsReady: boolean;
 }
 
-export default function SettingsPanel({ settings: s, isHost, customWords, connectedCount }: Props) {
+export default function SettingsPanel({ settings: s, isHost, customWords, connectedCount, teamsReady }: Props) {
   const [wordsText, setWordsText] = useState(customWords.join(', '));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,7 +37,7 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
   const mode = GAME_MODES.find((m) => m.id === s.mode) ?? GAME_MODES[0];
   const telephone = s.mode === 'telephone';
   const enoughPlayers = connectedCount >= mode.minPlayers;
-  const canStart = enoughPlayers && (!customOnly || s.customWordCount >= 3);
+  const canStart = enoughPlayers && teamsReady && (!customOnly || s.customWordCount >= 3);
 
   return (
     <section className="card">
@@ -58,7 +60,7 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
       <div className="settings">
         {!telephone && (
           <NumberSelect
-            label="Tur sayısı"
+            label={s.mode === 'teams' ? 'Herkes kaç kez çizsin' : 'Tur sayısı'}
             value={s.rounds}
             options={ROUND_OPTIONS}
             disabled={!isHost}
@@ -124,6 +126,9 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
         <p className="muted small center">
           {mode.name} için en az {mode.minPlayers} oyuncu gerekli. Davet linkini paylaş!
         </p>
+      )}
+      {isHost && enoughPlayers && !teamsReady && (
+        <p className="muted small center">Her takımda en az 2 oyuncu olmalı. "🔀 Karıştır" ile dengeleyebilirsin.</p>
       )}
       {isHost && customOnly && s.customWordCount < 3 && (
         <p className="muted small center">Sadece özel kelimelerle oynamak için en az 3 kelime ekle.</p>

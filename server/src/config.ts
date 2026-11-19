@@ -107,5 +107,23 @@ export const IMPOSTOR_SCORING = {
   correctVote: 1,
 } as const;
 
+export const TEAMS = {
+  /** Her takımda en az bu kadar oyuncu (biri çizer, en az biri tahmin eder). */
+  minPerTeam: 2,
+  /** Çizenlerin kelimeyi görüp hazırlandığı süre. */
+  introMs: envMs('TEAM_INTRO_MS', 4_000),
+  /** Tur sonunda iki çizimin gösterildiği süre. */
+  resultMs: envMs('TEAM_RESULT_MS', 8_000),
+} as const;
+
+export const TEAM_SCORING = {
+  /** Turu kazanan takıma. */
+  win: 1,
+  /** Kişisel puan (oyun sonu "en iyi oyuncu" için): kelimeyi bilen. */
+  guesser: 2,
+  /** Kişisel puan: turu kazanan takımın çizeni. */
+  drawer: 1,
+} as const;
+
 /** İpucu harflerinin açıldığı süre oranları. */
 export const HINT_THRESHOLDS = [0.5, 0.7, 0.85] as const;

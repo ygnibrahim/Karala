@@ -83,6 +83,7 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
 - **🎨 Klasik** (en az 2 kişi): Sırayla biri çizer, diğerleri sohbetten tahmin eder.
 - **📞 Kırık Telefon** (en az 3 kişi): Herkes aynı anda bir şey yazar → bir sonrakinin yazdığını çizer → bir sonrakinin çizimini tahmin eder… Sonunda zincirler adım adım gösterilir; en çok 😂 alan "Günün Komedyeni" olur.
 - **🕵️ Sahtekâr** (en az 3 kişi): Biri kelimeyi bilmez, sadece kategoriyi bilir. Herkes ortak tuvale sırayla tek çizgi çizer (2 dönüş), sonra sahtekâr oylanır. Yakalanan sahtekâr kelimeyi bilirse kurtulur. Puan: kaçarsa sahtekâra +3, yakalanıp bilirse +2; yakalanıp bilemezse diğerlerine +1, doğru oy verenlere +1 daha.
+- **🏁 Çizim Yarışı** (en az 4 kişi, takımda en az 2): Lobide 🔴/🔵 takım seçilir (oda sahibi karıştırabilir). Her turda iki takımın çizeni aynı kelimeyi aynı anda kendi takımına çizer; herkes sadece kendi takımının tuvalini ve sohbetini görür. İlk bilen takım turu alır, tur sonunda iki çizim yan yana gösterilir. Kişisel puan: bilen +2, kazanan takımın çizeni +1.
 
 ## Klasik mod kuralları (özet)
 
@@ -109,4 +110,5 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
 - [x] Kırık Telefon modu
 - [x] Sahtekâr modu
 - [x] Küfür filtresi ve oyuncu çıkarma
-- [ ] Takım modu, herkese açık odalar
+- [x] Takım modu (Çizim Yarışı)
+- [ ] Herkese açık odalar

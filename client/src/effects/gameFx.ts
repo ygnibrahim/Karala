@@ -37,6 +37,9 @@ export function stateFx(p: RoomState | null, room: RoomState, meId: string) {
       case 'reveal':
         play('allGuessed');
         break;
+      case 'teams':
+        play('turnStart');
+        break;
       case 'turnEnd':
         if (!iJustGuessed) play(room.turnResult?.reason === 'allGuessed' ? 'allGuessed' : 'timeUp');
         break;
@@ -62,6 +65,30 @@ export function stateFx(p: RoomState | null, room: RoomState, meId: string) {
       play('yourTurn');
       vibrate([60, 40, 60]);
     }
+    return;
+  }
+
+  // Çizim Yarışı: yeni tur, çizim başlangıcı, tur sonu (takımım kazandıysa kutlama), ipucu harfleri.
+  if (room.teams?.race && p.teams?.race) {
+    const now = room.teams.race;
+    const before = p.teams.race;
+    const myTeam = room.teams.members[meId];
+    if (now.stage !== before.stage || now.turn !== before.turn) {
+      if (now.stage === 'intro') {
+        if (myTeam && now.drawers[myTeam] === meId) {
+          play('yourTurn');
+          vibrate([60, 40, 60]);
+        } else play('turnStart');
+      } else if (now.stage === 'draw') play('drawStart');
+      else if (now.stage === 'result') {
+        const won = !!myTeam && now.result?.winner === myTeam;
+        if (won) {
+          play('correct');
+          confetti({ x: 0.5, y: 0.35, count: 90, spread: 120, power: 13 });
+          vibrate(90);
+        } else play(now.result?.winner ? 'otherCorrect' : 'timeUp');
+      }
+    } else if (now.stage === 'draw' && revealedCount(room.hint) > revealedCount(p.hint)) play('hint');
     return;
   }
 

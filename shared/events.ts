@@ -1,6 +1,16 @@
 // Socket.IO olaylarının imzaları: istemci ve sunucu bu sözleşmeye göre konuşur.
 import type { DrawItem, DrawOp } from './drawing';
-import type { Avatar, ChatMessage, ImpostorRole, ReactionKind, RevealData, RoomState, Settings, TelephoneTask } from './types';
+import type {
+  Avatar,
+  ChatMessage,
+  ImpostorRole,
+  ReactionKind,
+  RevealData,
+  RoomState,
+  Settings,
+  TeamId,
+  TelephoneTask,
+} from './types';
 
 export interface JoinPayload {
   name: string;
@@ -41,6 +51,10 @@ export interface ClientToServer {
   'imp:vote': (targetId: string) => void;
   /** Sahtekâr: yakalanan sahtekârın kelime tahmini. */
   'imp:guess': (text: string) => void;
+  /** Çizim Yarışı (lobide): oyuncu kendi takımını seçer. */
+  'team:join': (team: TeamId) => void;
+  /** Çizim Yarışı (lobide): oda sahibi takımları rastgele dağıtır. */
+  'team:shuffle': () => void;
 }
 
 export interface ServerToClient {

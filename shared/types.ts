@@ -5,10 +5,11 @@ import type { DrawItem } from './drawing';
  * Klasik mod: choosing → drawing → turnEnd (tekrar) → gameEnd.
  * Kırık Telefon: telephone (yaz/çiz/tahmin adımları) → reveal (zincirlerin gösterimi) → gameEnd.
  * Sahtekâr: impostor (aşamaları ImpostorPublic.stage'de) → gameEnd.
+ * Çizim Yarışı: teams (aşamaları TeamRacePublic.stage'de) → gameEnd.
  */
-export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'telephone' | 'reveal' | 'impostor' | 'gameEnd';
+export type Phase = 'lobby' | 'choosing' | 'drawing' | 'turnEnd' | 'telephone' | 'reveal' | 'impostor' | 'teams' | 'gameEnd';
 
-export type GameMode = 'classic' | 'telephone' | 'impostor';
+export type GameMode = 'classic' | 'telephone' | 'impostor' | 'teams';
 
 export interface Avatar {
   color: string;
@@ -66,6 +67,8 @@ export interface RoomState {
   telephone: TelephonePublic | null;
   /** Sadece Sahtekâr modunda dolu. */
   impostor: ImpostorPublic | null;
+  /** Çizim Yarışı modu seçiliyken dolu (lobide takım seçimi için de). */
+  teams: TeamsPublic | null;
 }
 
 // ---- Kırık Telefon ----
@@ -155,6 +158,40 @@ export interface ImpostorRole {
   isImpostor: boolean;
   word: string | null;
   category: string;
+}
+
+// ---- Çizim Yarışı (takım modu) ----
+
+export type TeamId = 'red' | 'blue';
+
+/** intro: çizenler kelimeyi görür · draw: iki takım aynı anda çizer · result: iki çizim de gösterilir */
+export type TeamRaceStage = 'intro' | 'draw' | 'result';
+
+export interface TeamRaceResult {
+  word: string;
+  /** Kelimeyi ilk bilen takım (süre dolduysa null). */
+  winner: TeamId | null;
+  guesserId: string | null;
+  /** Tur sonunda herkes iki çizimi de görür. */
+  drawings: Record<TeamId, DrawItem[]>;
+}
+
+export interface TeamRacePublic {
+  turn: number;
+  totalTurns: number;
+  stage: TeamRaceStage;
+  /** Bu turda her takımın çizeni. */
+  drawers: Record<TeamId, string | null>;
+  result: TeamRaceResult | null;
+}
+
+export interface TeamsPublic {
+  /** Oyuncu kimliği → takımı. */
+  members: Record<string, TeamId>;
+  /** Kazanılan tur sayısı. */
+  score: Record<TeamId, number>;
+  /** Oyun sürerken dolu. */
+  race: TeamRacePublic | null;
 }
 
 export type ChatKind = 'chat' | 'system' | 'correct' | 'close' | 'insider';

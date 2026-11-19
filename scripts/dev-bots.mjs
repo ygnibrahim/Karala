@@ -1,6 +1,7 @@
 // Geliştirme aracı: bir odaya kendi kendine oynayan botlar ekler (arayüzü kalabalık odada denemek için).
 // Kullanım: node scripts/dev-bots.mjs <ODA_KODU> [bot sayısı=5] [sunucu=http://localhost:3001]
 // Botlar: Kırık Telefon'da yazar/çizer/tahmin eder, Sahtekâr'da sırası gelince çizip oy verir,
+// Çizim Yarışı'nda çizen olunca karalar, değilse takımına tahmin yazar,
 // klasik modda çizen olunca kelime seçip çizer. Ctrl+C ile kapatılır.
 import { randomBytes } from 'node:crypto';
 import { io } from 'socket.io-client';
@@ -79,6 +80,17 @@ function bot(i) {
 
   socket.on('room:state', async (s) => {
     state = s;
+    // Çizim Yarışı: çizen olunca karala, tahmin eden olunca takımına yanlış bir tahmin yaz.
+    const race = s.teams?.race;
+    if (race?.stage === 'draw' && me) {
+      const key = `team-${race.turn}`;
+      if (doneTurn === key) return;
+      doneTurn = key;
+      await sleep(600 + Math.random() * 1200);
+      if (Object.values(race.drawers).includes(me)) scribble((op) => socket.emit('draw:op', op));
+      else socket.emit('chat:send', ['kedi mi?', 'bir ev', 'galiba araba', 'uçak!'][i % 4]);
+      return;
+    }
     const imp = s.impostor;
     if (!imp || !me) return;
     if (imp.stage === 'draw' && imp.turnPlayerId === me) {

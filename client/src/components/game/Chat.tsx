@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { socket } from '../../lib/socket';
 import type { GameData } from '../../types';
 
-export default function Chat({ data, compact = false }: { data: GameData; compact?: boolean }) {
+interface Props {
+  data: GameData;
+  compact?: boolean;
+  /** Ekranın kendi ipucu metni (ör. takım modunda "sadece takımın görür"). */
+  placeholder?: string;
+}
+
+export default function Chat({ data, compact = false, placeholder: customPlaceholder }: Props) {
   const { room, meId, messages } = data;
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
@@ -15,7 +22,7 @@ export default function Chat({ data, compact = false }: { data: GameData; compac
   const me = room.players.find((p) => p.id === meId);
   const drawing = room.phase === 'drawing';
   const insider = drawing && (room.drawerId === meId || !!me?.guessed);
-  const placeholder = !drawing ? 'Mesaj yaz…' : insider ? 'Sadece bilenler görür…' : 'Tahminini yaz…';
+  const placeholder = customPlaceholder ?? (!drawing ? 'Mesaj yaz…' : insider ? 'Sadece bilenler görür…' : 'Tahminini yaz…');
 
   const send = () => {
     const t = text.trim();
