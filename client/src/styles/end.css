@@ -13,6 +13,7 @@
   display: flex;
   align-items: flex-end;
   gap: 10px;
+  max-width: 100%;
 }
 .step {
   display: flex;
@@ -20,7 +21,9 @@
   align-items: center;
   gap: 2px;
   color: #fff;
-  width: 110px;
+  /* Dar ekranda 3 basamak sığsın: 110 px ya da ekranın üçte biri. */
+  width: min(110px, calc((100vw - 52px) / 3));
+  min-width: 0;
   text-align: center;
 }
 .step b {

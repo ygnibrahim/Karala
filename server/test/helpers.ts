@@ -152,3 +152,19 @@ export async function reconnect(
   const res = await join(socket, payload(name, { code, sessionId }));
   return { socket, res };
 }
+
+/**
+ * `fromIndex`ten sonra gelmiş (ya da gelecek) ilk eşleşen olayı döner. Olay bekleme kurulmadan önce
+ * gelmişse kaçırılmaz. `fromIndex` için işlemden önce `socket.log.length` verin.
+ */
+export function nextEvent<T = unknown>(
+  socket: Client,
+  event: string,
+  match: (arg: T) => boolean = () => true,
+  fromIndex = 0,
+  ms = 5000,
+): Promise<T> {
+  const hit = socket.log.slice(fromIndex).find((e) => e.event === event && match(e.args[0] as T));
+  if (hit) return Promise.resolve(hit.args[0] as T);
+  return waitFor<T>(socket, event, match, ms);
+}

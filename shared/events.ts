@@ -17,6 +17,8 @@ export interface ClientToServer {
   'room:join': (p: JoinPayload, ack: (r: AckResult) => void) => void;
   'room:leave': () => void;
   'room:settings': (s: Partial<Settings>) => void;
+  /** Oda sahibi bir oyuncuyu odadan çıkarır. */
+  'room:kick': (playerId: string) => void;
   'game:start': () => void;
   'game:restart': () => void;
   'word:choose': (index: number) => void;
@@ -45,6 +47,8 @@ export interface ServerToClient {
   'room:state': (s: RoomState) => void;
   /** Sadece oda sahibine: özel kelime listesi. */
   'room:customWords': (words: string[]) => void;
+  /** Bu oyuncu oda sahibi tarafından çıkarıldı. */
+  'room:kicked': () => void;
   'word:choices': (words: string[]) => void;
   'word:secret': (word: string) => void;
   'draw:op': (op: DrawOp) => void;

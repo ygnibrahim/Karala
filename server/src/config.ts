@@ -23,8 +23,8 @@ export const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',')
   .filter(Boolean);
 
 export const TIMING = {
-  chooseMs: 15_000,
-  turnEndMs: 6_000,
+  chooseMs: envMs('CHOOSE_MS', 15_000),
+  turnEndMs: envMs('TURN_END_MS', 6_000),
   /** Bağlantısı kopan oyuncu bu süre içinde dönerse kaldığı yerden devam eder (telefon ekranı kapanması, arama vb.). */
   reconnectGraceMs: envMs('RECONNECT_GRACE_MS', 120_000),
   /** Klasik modda bağlantısı kopan çizen için tur bu kadar bekler. */

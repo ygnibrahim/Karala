@@ -69,6 +69,8 @@ npm run android:build
 | `npm run check`     | lint + typecheck + test: **push etmeden önce çalıştır**             |
 | `npm run build`     | İstemciyi `client/dist`'e derler                                    |
 | `npm start`         | Sunucuyu başlatır; `client/dist` varsa oyunu da aynı adresten sunar |
+| `node scripts/dev-bots.mjs KOD 4` | Odaya kendi kendine oynayan botlar ekler (arayüz denemesi) |
+| `node scripts/live-check.mjs` | Canlı sitede 3 modu ve kopma senaryolarını uçtan uca dener |
 
 ## Yayına alma
 
@@ -88,7 +90,12 @@ Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki s
 - Çizen: kelimeyi bilen her oyuncu için +10.
 - Süre ilerledikçe harf ipuçları açılır; bir harf farkla yazılan tahminlerde "çok yakın!" uyarısı çıkar.
 - Türkçe karakter şart değil: "ordek" = "ördek".
-- Herkes bilirse tur erken biter. Sayfayı yenileyen oyuncu 30 sn içinde kaldığı yerden devam eder.
+- Herkes bilirse tur erken biter. Sayfayı yenileyen ya da bağlantısı kopan oyuncu 2 dk içinde kaldığı yerden devam eder.
+
+## Moderasyon
+
+- Sohbetteki küfürler `***` ile maskelenir (harf aralama, rakamla yazma, harf tekrarı gibi kaçamaklar da yakalanır). Küfürlü isim "Oyuncu" olur, küfürlü özel kelimeler listeye alınmaz. Liste: `server/src/moderation/profanity.ts`.
+- Oda sahibi, oyuncu listesindeki ✕ ile birini odadan çıkarabilir; çıkarılan oyuncu aynı odaya geri giremez.
 
 ## Yol haritası
 
@@ -100,4 +107,5 @@ Kontrollerden biri kırmızıysa canlı site eski sürümde kalır. Yayındaki s
 - [ ] QR ile katılma
 - [x] Kırık Telefon modu
 - [x] Sahtekâr modu
+- [x] Küfür filtresi ve oyuncu çıkarma
 - [ ] Takım modu, herkese açık odalar

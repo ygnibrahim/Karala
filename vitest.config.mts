@@ -10,6 +10,6 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 10_000,
     // Bağlantı kopma testlerinde gerçek süreleri (2 dk, 10 sn) beklememek için.
-    env: { RECONNECT_GRACE_MS: '1500', DRAWER_GRACE_MS: '800' },
+    env: { RECONNECT_GRACE_MS: '1500', DRAWER_GRACE_MS: '800', CHOOSE_MS: '1500', TURN_END_MS: '300' },
   },
 });

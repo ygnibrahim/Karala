@@ -1,5 +1,6 @@
 // Oda sahibinin gönderdiği ayar değişikliklerini doğrular. Geçersiz alanlar yok sayılır.
 import { CATEGORIES, DRAW_TIME_OPTIONS, GAME_MODES, LIMITS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS, type Settings } from '@shared';
+import { containsProfanity } from '../moderation/profanity';
 import { cleanText, normalizeGuess } from '../utils/text';
 
 const pick = (v: unknown, options: readonly number[]): number | undefined =>
@@ -9,7 +10,7 @@ export function sanitizeCustomWords(input: unknown[]): string[] {
   const words = input
     .filter((w): w is string => typeof w === 'string')
     .map((w) => cleanText(w, LIMITS.customWordLength).toLocaleLowerCase('tr'))
-    .filter((w) => normalizeGuess(w).length >= 2);
+    .filter((w) => normalizeGuess(w).length >= 2 && !containsProfanity(w));
   return [...new Set(words)].slice(0, LIMITS.customWordCount);
 }
 

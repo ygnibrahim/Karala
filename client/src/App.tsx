@@ -65,6 +65,18 @@ export default function App() {
     }
   }, []);
 
+  /** Odadan çıkınca (kendi isteğiyle ya da atılınca) yerel durumu temizler. */
+  const resetRoom = useCallback(() => {
+    setActiveRoom(null);
+    setUrlRoom(null);
+    setInviteCode(null);
+    setRoom(null);
+    lastState.current = null;
+    setMessages([]);
+    setSecret(null);
+    setCustomWords([]);
+  }, []);
+
   useEffect(() => {
     const onConnect = () => {
       setConnected(true);
@@ -103,6 +115,10 @@ export default function App() {
       if (s.phase !== 'reveal') setReveal(null);
       if (s.phase !== 'impostor') setRole(null);
     };
+    const onKicked = () => {
+      resetRoom();
+      setError('Oda sahibi seni odadan çıkardı.');
+    };
     const onMessage = (m: ChatMessage) => {
       messageFx(m);
       setMessages((list) => [...list.slice(-MAX_MESSAGES), m]);
@@ -115,6 +131,7 @@ export default function App() {
     socket.on('word:choices', setChoices);
     socket.on('word:secret', setSecret);
     socket.on('chat:message', onMessage);
+    socket.on('room:kicked', onKicked);
     socket.on('tp:task', setTask);
     socket.on('tp:reveal', setReveal);
     socket.on('imp:role', setRole);
@@ -127,11 +144,12 @@ export default function App() {
       socket.off('word:choices', setChoices);
       socket.off('word:secret', setSecret);
       socket.off('chat:message', onMessage);
+      socket.off('room:kicked', onKicked);
       socket.off('tp:task', setTask);
       socket.off('tp:reveal', setReveal);
       socket.off('imp:role', setRole);
     };
-  }, [handleAck]);
+  }, [handleAck, resetRoom]);
 
   useEffect(() => reconnectOnReturn(), []);
 
@@ -154,14 +172,7 @@ export default function App() {
 
   const leave = () => {
     socket.emit('room:leave');
-    setActiveRoom(null);
-    setUrlRoom(null);
-    setInviteCode(null);
-    setRoom(null);
-    lastState.current = null;
-    setMessages([]);
-    setSecret(null);
-    setCustomWords([]);
+    resetRoom();
   };
 
   let screen: React.ReactNode;

@@ -346,3 +346,16 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Üst bardaki orta alan dar ekranda taşmasın: başlık kısalır, kelime sarar. */
+.word-area {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.tp-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

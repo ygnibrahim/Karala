@@ -77,6 +77,8 @@ export class Room {
   private turnGains: Record<string, number> = {};
   private turnResult: TurnResult | null = null;
   private msgId = 0;
+  /** Oda sahibinin çıkardığı oyuncuların oturum anahtarları: aynı odaya geri giremezler. */
+  private banned = new Set<string>();
   /** Bağlantısı kopan çizenin dönmesini bekleyen zamanlayıcı. */
   private drawerGraceTimer: NodeJS.Timeout | null = null;
 
@@ -98,6 +100,7 @@ export class Room {
 
   /** Oyuncuyu odaya ekler ya da aynı oturum anahtarıyla gelen oyuncuyu yeniden bağlar. */
   join(socket: GameSocket, sessionId: string, name: string, avatar: Avatar): JoinResult {
+    if (this.banned.has(sessionId)) return { ok: false, error: 'Bu odadan çıkarıldın.' };
     let player = this.players.find((p) => p.sessionId === sessionId);
 
     if (player) {
@@ -166,14 +169,14 @@ export class Room {
   }
 
   /** Oyuncuyu odadan tamamen çıkarır. */
-  remove(playerId: string, socket?: GameSocket): void {
+  remove(playerId: string, socket?: GameSocket, reason: 'left' | 'kicked' = 'left'): void {
     const p = this.findPlayer(playerId);
     if (!p) return;
     if (p.leaveTimer) clearTimeout(p.leaveTimer);
     socket?.leave(this.code);
     this.players = this.players.filter((x) => x.id !== playerId);
     this.queue = this.queue.filter((id) => id !== playerId);
-    this.system(`${p.name} odadan ayrıldı.`);
+    this.system(reason === 'kicked' ? `${p.name} odadan çıkarıldı.` : `${p.name} odadan ayrıldı.`);
 
     if (this.players.length === 0) {
       this.dispose();
@@ -190,6 +193,19 @@ export class Room {
     this.telephone?.onPresenceChange();
     this.impostor?.onPresenceChange();
     this.broadcastState();
+  }
+
+  /** Oda sahibi bir oyuncuyu çıkarır; çıkarılan aynı odaya geri giremez. */
+  kick(hostId: string, targetId: string): void {
+    if (hostId !== this.hostId || hostId === targetId) return;
+    const target = this.findPlayer(targetId);
+    if (!target) return;
+    this.banned.add(target.sessionId);
+    if (target.socketId) {
+      this.io.to(target.socketId).emit('room:kicked');
+      this.io.in(target.socketId).socketsLeave(this.code);
+    }
+    this.remove(targetId, undefined, 'kicked');
   }
 
   /** Odanın zamanlayıcılarını durdurur (oda kapanırken). */

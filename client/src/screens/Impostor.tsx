@@ -3,6 +3,7 @@ import type { ImpostorPublic, ImpostorRole, RoomState } from '@shared';
 import { type FormEvent, useState } from 'react';
 import Board from '../components/board/Board';
 import AvatarBadge from '../components/common/AvatarBadge';
+import KickButton from '../components/common/KickButton';
 import Chat from '../components/game/Chat';
 import TopBar from '../components/game/TopBar';
 import { useCountdown } from '../hooks/useCountdown';
@@ -171,8 +172,8 @@ function VotePanel({ room, imp, meId, canVote }: { room: RoomState; imp: Imposto
                   socket.emit('imp:vote', id);
                 }}
               >
-                <AvatarBadge avatar={p.avatar} size={28} />
-                {p.name}
+                <AvatarBadge avatar={p.avatar} size={24} />
+                <span className="vote-name">{p.name}</span>
               </button>
             );
           })}
@@ -257,6 +258,7 @@ function Result({ room, imp, meId }: { room: RoomState; imp: ImpostorPublic; meI
 
 /** Sol tarafta çizim sırası: sırası geleni ve oy verenleri gösterir. */
 function TurnOrder({ room, imp, meId }: { room: RoomState; imp: ImpostorPublic; meId: string }) {
+  const viewerIsHost = !!room.players.find((p) => p.id === meId)?.isHost;
   return (
     <ul className="players">
       {imp.order.map((id, i) => {
@@ -280,6 +282,7 @@ function TurnOrder({ room, imp, meId }: { room: RoomState; imp: ImpostorPublic; 
             </span>
             {isTurn && <span className="tag">✏️</span>}
             {voted && <span className="tag">🗳️</span>}
+            <KickButton viewerIsHost={viewerIsHost} viewerId={meId} targetId={id} targetName={p.name} />
           </li>
         );
       })}

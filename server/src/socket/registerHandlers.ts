@@ -88,6 +88,12 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       asPlayer('action', (r, id, s: unknown) => r.updateSettings(id, s)),
     );
     socket.on(
+      'room:kick',
+      asPlayer('action', (r, id, target: unknown) => {
+        if (typeof target === 'string') r.kick(id, target);
+      }),
+    );
+    socket.on(
       'game:start',
       asPlayer('action', (r, id) => r.start(id)),
     );

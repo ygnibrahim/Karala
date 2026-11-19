@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import Board from '../components/board/Board';
 import AvatarBadge from '../components/common/AvatarBadge';
 import DrawingView from '../components/common/DrawingView';
+import KickButton from '../components/common/KickButton';
 import TopBar from '../components/game/TopBar';
 import { play } from '../effects/sound';
 import { useCountdown } from '../hooks/useCountdown';
@@ -91,7 +92,7 @@ function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: numbe
   };
 
   return (
-    <form className="card tp-card" onSubmit={onSubmit}>
+    <form className={`card tp-card${drawing ? ' with-drawing' : ''}`} onSubmit={onSubmit}>
       {drawing ? (
         <>
           <h2>Bu çizim ne olabilir?</h2>
@@ -176,6 +177,7 @@ function Waiting({ room }: { room: RoomState }) {
 
 function PlayerProgress({ room, meId }: { room: RoomState; meId: string }) {
   const tp = room.telephone;
+  const viewerIsHost = !!room.players.find((p) => p.id === meId)?.isHost;
   if (!tp) return null;
   return (
     <ul className="tp-players">
@@ -190,6 +192,7 @@ function PlayerProgress({ room, meId }: { room: RoomState; meId: string }) {
             <span role="img" aria-label={finished ? 'bitirdi' : 'düşünüyor'}>
               {finished ? '✅' : '✏️'}
             </span>
+            <KickButton viewerIsHost={viewerIsHost} viewerId={meId} targetId={id} targetName={p.name} />
           </li>
         );
       })}

@@ -84,3 +84,44 @@
     font-size: 0.95rem;
   }
 }
+
+.vote-option {
+  max-width: 100%;
+  min-width: 0;
+}
+.vote-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 820px) {
+  .vote-options {
+    gap: 4px;
+  }
+  .vote-option {
+    font-size: 0.82rem;
+    padding: 2px 8px 2px 2px;
+  }
+  .vote-name {
+    max-width: 96px;
+  }
+  .imp-role {
+    font-size: 0.85rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Yatay telefon / kısa ekran: panel sütun genişliğinde, çipler küçük. */
+@media (max-height: 500px) {
+  .imp-panel {
+    width: 100%;
+    padding: 6px 10px;
+  }
+  .vote-name {
+    max-width: 90px;
+  }
+}
