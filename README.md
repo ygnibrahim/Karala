@@ -59,18 +59,18 @@ npm run android:build
 
 ## Komutlar
 
-| Komut               | Ne yapar                                                            |
-| ------------------- | ------------------------------------------------------------------- |
-| `npm run dev`       | Geliştirme: sunucu (3001) + arayüz (5173)                           |
-| `npm test`          | Tüm testler (birim + güvenlik)                                      |
-| `npm run lint`      | Kod stili ve hata denetimi (Biome)                                  |
-| `npm run format`    | Kodu otomatik biçimlendirir                                         |
-| `npm run typecheck` | Sunucu + istemci tip kontrolü                                       |
-| `npm run check`     | lint + typecheck + test: **push etmeden önce çalıştır**             |
-| `npm run build`     | İstemciyi `client/dist`'e derler                                    |
-| `npm start`         | Sunucuyu başlatır; `client/dist` varsa oyunu da aynı adresten sunar |
-| `node scripts/dev-bots.mjs KOD 4` | Odaya kendi kendine oynayan botlar ekler (arayüz denemesi) |
-| `node scripts/live-check.mjs` | Canlı sitede 3 modu ve kopma senaryolarını uçtan uca dener |
+| Komut                             | Ne yapar                                                            |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`                     | Geliştirme: sunucu (3001) + arayüz (5173)                           |
+| `npm test`                        | Tüm testler (birim + güvenlik)                                      |
+| `npm run lint`                    | Kod stili ve hata denetimi (Biome)                                  |
+| `npm run format`                  | Kodu otomatik biçimlendirir                                         |
+| `npm run typecheck`               | Sunucu + istemci tip kontrolü                                       |
+| `npm run check`                   | lint + typecheck + test: **push etmeden önce çalıştır**             |
+| `npm run build`                   | İstemciyi `client/dist`'e derler                                    |
+| `npm start`                       | Sunucuyu başlatır; `client/dist` varsa oyunu da aynı adresten sunar |
+| `node scripts/dev-bots.mjs KOD 4` | Odaya kendi kendine oynayan botlar ekler (arayüz denemesi)          |
+| `node scripts/live-check.mjs`     | Canlı sitede 3 modu ve kopma senaryolarını uçtan uca dener          |
 
 ## Yayına alma
 
