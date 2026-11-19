@@ -1,7 +1,16 @@
 // Çizim Yarışı (takım modu): iki takımdan birer çizen AYNI kelimeyi aynı anda kendi takımına çizer.
 // Her takım sadece kendi tuvalini ve kendi sohbetini görür. Kelimeyi ilk bilen takım turu kazanır;
 // tur sonunda iki çizim de herkese gösterilir.
-import { type DrawItem, type DrawOp, TEAM_IDS, type TeamId, type TeamRacePublic, type TeamRaceStage } from '@shared';
+import {
+  type DrawItem,
+  type DrawOp,
+  type MessageKey,
+  type MessageVars,
+  TEAM_IDS,
+  type TeamId,
+  type TeamRacePublic,
+  type TeamRaceStage,
+} from '@shared';
 import { TEAM_SCORING, TEAMS, TIMING } from '../config';
 import { randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
@@ -33,7 +42,7 @@ export interface TeamRaceHooks {
   changed(): void;
   pickWord(): string;
   award(playerId: string, points: number): void;
-  system(text: string): void;
+  system(key: MessageKey, vars?: MessageVars): void;
   finished(score: Record<TeamId, number>): void;
 }
 
@@ -127,7 +136,7 @@ export class TeamRaceGame {
       const drawer = this.drawers[winner];
       if (drawer) this.hooks.award(drawer, TEAM_SCORING.drawer);
     } else {
-      this.hooks.system(`Süre doldu! Kelime "${this.word}" idi.`);
+      this.hooks.system('timeUpWord', { word: this.word });
     }
     this.result = {
       word: this.word,
@@ -190,7 +199,7 @@ export class TeamRaceGame {
       return target && guess.includes(target) ? { kind: 'blocked' } : { kind: 'team', team };
     }
     if (this.stage === 'draw' && guess === target) {
-      this.hooks.system(`${this.hooks.find(playerId)?.name ?? 'Biri'} bildi! Kelime "${this.word}" 🏁`);
+      this.hooks.system('teamGuessed', { name: this.hooks.find(playerId)?.name ?? '?', word: this.word });
       this.endTurn(team, playerId);
       return { kind: 'correct' };
     }
@@ -202,7 +211,7 @@ export class TeamRaceGame {
   /** Bağlantı değişti: takımlardan biri oynanamaz hale geldiyse oyun biter. */
   onPresenceChange(): void {
     if (!this.teamsPlayable()) {
-      this.hooks.system('Takımlardan birinde yeterli oyuncu kalmadı.');
+      this.hooks.system('teamTooSmall');
       this.finish();
     }
   }

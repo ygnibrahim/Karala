@@ -12,12 +12,40 @@
   z-index: 100;
 }
 
-.sound-toggle.corner {
+/* Ana ekranın sağ üst köşesi: dil seçimi + ses */
+.home-corner {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
   right: 12px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.home-corner .sound-toggle {
   background: rgba(255, 255, 255, 0.9);
+}
+.lang-switch {
+  display: inline-flex;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.lang-switch button {
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: 6px 9px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lang-switch button.active {
+  background: var(--bg1);
+  color: #fff;
 }
 .head-actions {
   display: flex;

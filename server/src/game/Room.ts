@@ -9,20 +9,25 @@ import {
   CUSTOM_ONLY_CATEGORY,
   DEFAULT_SETTINGS,
   type DrawOp,
+  type ErrorCode,
   GAME_MODES,
+  type Lang,
+  type MessageKey,
+  type MessageVars,
   type Phase,
   type ReactionKind,
+  type ReportReason,
   type RoomState,
   type ServerToClient,
   type Settings,
   TEAM_IDS,
-  TEAM_NAMES,
   type TeamId,
   type TeamsPublic,
   type TurnResult,
 } from '@shared';
 import type { Server, Socket } from 'socket.io';
-import { TEAMS, TIMING } from '../config';
+import { MODERATION, TEAMS, TIMING } from '../config';
+import { defaultReportSink, type ReportSink } from '../moderation/reports';
 import { pickRandom, randomId, randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
 import { applySettings } from '../validation/settings';
@@ -49,9 +54,11 @@ export interface Player {
   guessed: boolean;
   reacted: boolean;
   leaveTimer: NodeJS.Timeout | null;
+  /** Son sohbet mesajları: bildirim gelirse bağlam olarak eklenir. */
+  recent: string[];
 }
 
-export type JoinResult = { ok: true; playerId: string } | { ok: false; error: string };
+export type JoinResult = { ok: true; playerId: string } | { ok: false; error: ErrorCode };
 
 const isActiveTurn = (phase: Phase) => phase === 'choosing' || phase === 'drawing';
 const isInGame = (phase: Phase) => phase !== 'lobby' && phase !== 'gameEnd';
@@ -90,6 +97,8 @@ export class Room {
   private msgId = 0;
   /** Oda sahibinin çıkardığı oyuncuların oturum anahtarları: aynı odaya geri giremezler. */
   private banned = new Set<string>();
+  /** Bildirilen oyuncu → onu bildirenler (her kişi bir oyuncuyu bir kez bildirebilir). */
+  private reports = new Map<string, Set<string>>();
   /** Bağlantısı kopan çizenin dönmesini bekleyen zamanlayıcı. */
   private drawerGraceTimer: NodeJS.Timeout | null = null;
 
@@ -97,6 +106,7 @@ export class Room {
     private readonly io: IO,
     readonly code: string,
     private readonly onEmpty: (room: Room) => void,
+    private readonly reportSink: ReportSink = defaultReportSink,
   ) {}
 
   // ---------- Oyuncu yönetimi ----------
@@ -110,8 +120,10 @@ export class Room {
   }
 
   /** Oyuncuyu odaya ekler ya da aynı oturum anahtarıyla gelen oyuncuyu yeniden bağlar. */
-  join(socket: GameSocket, sessionId: string, name: string, avatar: Avatar): JoinResult {
-    if (this.banned.has(sessionId)) return { ok: false, error: 'Bu odadan çıkarıldın.' };
+  join(socket: GameSocket, sessionId: string, name: string, avatar: Avatar, lang?: Lang): JoinResult {
+    // Yeni odanın kelime dili, odayı kuranın arayüz diliyle başlar (oda sahibi lobide değiştirebilir).
+    if (this.players.length === 0 && lang) this.settings.language = lang;
+    if (this.banned.has(sessionId)) return { ok: false, error: 'banned' };
     let player = this.players.find((p) => p.sessionId === sessionId);
 
     if (player) {
@@ -125,9 +137,9 @@ export class Room {
       player.socketId = socket.id;
       if (player.id === this.drawerId) this.clearDrawerGrace();
       // Geri dönen oyuncu odadaki adını/avatarını korur.
-      if (!previousSocket) this.system(`${player.name} geri döndü.`);
+      if (!previousSocket) this.system('returned', { name: player.name });
     } else {
-      if (this.players.length >= this.settings.maxPlayers) return { ok: false, error: 'Oda dolu.' };
+      if (this.players.length >= this.settings.maxPlayers) return { ok: false, error: 'full' };
       player = {
         id: randomId(),
         sessionId,
@@ -138,10 +150,11 @@ export class Room {
         guessed: false,
         reacted: false,
         leaveTimer: null,
+        recent: [],
       };
       this.players.push(player);
       this.teamOf.set(player.id, this.smallerTeam());
-      this.system(`${name} odaya katıldı.`);
+      this.system('joined', { name });
     }
 
     if (!this.hostId || !this.findPlayer(this.hostId)) this.hostId = player.id;
@@ -160,7 +173,7 @@ export class Room {
 
     if (p.id === this.drawerId && isActiveTurn(this.phase)) {
       // Kısa kopmalarda (tünel, ağ değişimi) turu hemen bitirme: çizenin dönmesini bekle.
-      this.system(`${p.name} (çizen) bağlantıyı kaybetti, bekleniyor…`);
+      this.system('drawerLost', { name: p.name });
       this.clearDrawerGrace();
       this.drawerGraceTimer = setTimeout(() => {
         this.drawerGraceTimer = null;
@@ -182,7 +195,7 @@ export class Room {
   }
 
   /** Oyuncuyu odadan tamamen çıkarır. */
-  remove(playerId: string, socket?: GameSocket, reason: 'left' | 'kicked' = 'left'): void {
+  remove(playerId: string, socket?: GameSocket, reason: 'left' | 'kicked' | 'silent' = 'left'): void {
     const p = this.findPlayer(playerId);
     if (!p) return;
     if (p.leaveTimer) clearTimeout(p.leaveTimer);
@@ -190,7 +203,9 @@ export class Room {
     this.players = this.players.filter((x) => x.id !== playerId);
     this.queue = this.queue.filter((id) => id !== playerId);
     this.teamOf.delete(playerId);
-    this.system(reason === 'kicked' ? `${p.name} odadan çıkarıldı.` : `${p.name} odadan ayrıldı.`);
+    this.reports.delete(playerId);
+    for (const reporters of this.reports.values()) reporters.delete(playerId);
+    if (reason !== 'silent') this.system(reason, { name: p.name });
 
     if (this.players.length === 0) {
       this.dispose();
@@ -214,13 +229,52 @@ export class Room {
   kick(hostId: string, targetId: string): void {
     if (hostId !== this.hostId || hostId === targetId) return;
     const target = this.findPlayer(targetId);
-    if (!target) return;
+    if (target) this.expel(target);
+  }
+
+  /**
+   * Bir oyuncuyu bildirir. Kayıt sunucu günlüğüne (ve varsa webhook'a) gider. Odadaki diğer oyuncuların
+   * yarısı aynı kişiyi bildirirse kişi odadan çıkarılır ve geri giremez.
+   */
+  report(reporterId: string, targetId: string, reason: ReportReason): void {
+    const reporter = this.findPlayer(reporterId);
+    const target = this.findPlayer(targetId);
+    if (!reporter || !target || reporterId === targetId) return;
+    const reporters = this.reports.get(targetId) ?? new Set<string>();
+    if (reporters.has(reporterId)) {
+      this.emitTo(reporter, 'chat:message', this.note('system', 'alreadyReported', { name: target.name }));
+      return;
+    }
+    reporters.add(reporterId);
+    this.reports.set(targetId, reporters);
+
+    const others = this.players.length - 1;
+    const needed = Math.max(MODERATION.minReportsForAutoKick, Math.ceil(others * MODERATION.autoKickRatio));
+    const autoKick = reporters.size >= needed;
+    this.reportSink({
+      room: this.code,
+      reason,
+      target: { id: target.id, name: target.name },
+      reporter: { id: reporter.id, name: reporter.name },
+      recentMessages: [...target.recent],
+      reportCount: reporters.size,
+      autoKicked: autoKick,
+    });
+    // Bildirenin adı kimseye söylenmez; bildirilen kişiye de haber verilmez.
+    this.emitTo(reporter, 'chat:message', this.note('system', 'reportThanks'));
+    if (autoKick) this.expel(target, true);
+  }
+
+  /** Oyuncuyu odadan atar ve geri girmesini engeller (oda sahibi çıkarması ya da bildirimler). */
+  private expel(target: Player, byReports = false): void {
     this.banned.add(target.sessionId);
+    this.reports.delete(target.id);
     if (target.socketId) {
       this.io.to(target.socketId).emit('room:kicked');
       this.io.in(target.socketId).socketsLeave(this.code);
     }
-    this.remove(targetId, undefined, 'kicked');
+    if (byReports) this.system('autoKicked', { name: target.name });
+    this.remove(target.id, undefined, byReports ? 'silent' : 'kicked');
   }
 
   /** Odanın zamanlayıcılarını durdurur (oda kapanırken). */
@@ -244,7 +298,7 @@ export class Room {
     const next = this.connectedPlayers[0];
     if (next && next.id !== this.hostId) {
       this.hostId = next.id;
-      this.system(`${next.name} artık oda sahibi.`);
+      this.system('newHost', { name: next.name });
       this.sendCustomWords(next);
     }
   }
@@ -252,7 +306,7 @@ export class Room {
   private checkEnoughPlayers(): void {
     if (!isInGame(this.phase)) return;
     if (this.connectedPlayers.length < 2) {
-      this.system('Yeterli oyuncu kalmadı, lobiye dönülüyor.');
+      this.system('notEnoughPlayers');
       this.backToLobby();
     }
   }
@@ -271,11 +325,11 @@ export class Room {
     if (playerId !== this.hostId || this.phase !== 'lobby') return;
     const mode = GAME_MODES.find((m) => m.id === this.settings.mode) ?? GAME_MODES[0];
     if (this.connectedPlayers.length < mode.minPlayers) {
-      this.system(`${mode.name} için en az ${mode.minPlayers} oyuncu gerekli.`);
+      this.system('modeNeedsPlayers', { mode: mode.id, count: mode.minPlayers });
       return;
     }
     if (wordPool(this.settings).length < 3) {
-      this.system('Oyunu başlatmak için en az 3 kelime gerekli.');
+      this.system('needWords', { count: 3 });
       return;
     }
     for (const p of this.players) p.score = 0;
@@ -294,7 +348,7 @@ export class Room {
     this.usedWords.clear();
     this.round = 1;
     this.queue = this.connectedPlayers.map((p) => p.id);
-    this.system('Oyun başladı! İyi eğlenceler 🎨');
+    this.system('gameStarted');
     this.nextTurn();
   }
 
@@ -386,7 +440,7 @@ export class Room {
     const drawer = this.drawerId ? this.findPlayer(this.drawerId) : undefined;
     if (drawer) {
       this.emitTo(drawer, 'word:secret', word);
-      this.system(`${drawer.name} çiziyor!`);
+      this.system('drawing', { name: drawer.name });
     }
   }
 
@@ -397,7 +451,7 @@ export class Room {
     this.phase = 'turnEnd';
     this.turnResult = { word, drawerId: this.drawerId, gains: { ...this.turnGains }, reason };
     this.setPhaseTimer(TIMING.turnEndMs);
-    if (word) this.system(`Kelime "${word}" idi.`);
+    if (word) this.system('wordWas', { word });
     this.broadcastState();
   }
 
@@ -408,7 +462,7 @@ export class Room {
     this.word = null;
     this.round = this.settings.rounds;
     const winner = [...this.players].sort((a, b) => b.score - a.score)[0];
-    if (winner) this.system(`Oyun bitti! Kazanan: ${winner.name} 🏆`);
+    if (winner) this.system('winner', { name: winner.name });
     this.broadcastState();
   }
 
@@ -450,6 +504,8 @@ export class Room {
   chat(playerId: string, text: string): void {
     const p = this.findPlayer(playerId);
     if (!p) return;
+    // Bildirim gelirse bağlam olsun diye son birkaç mesaj tutulur (sadece bellekte, oda kapanınca silinir).
+    p.recent = [...p.recent.slice(-(MODERATION.recentMessages - 1)), text];
 
     if (this.teamRace && this.phase === 'teams') {
       this.teamChat(p, text);
@@ -457,7 +513,7 @@ export class Room {
     }
 
     if (this.impostor?.revealsWord(text)) {
-      this.emitTo(p, 'chat:message', this.msg('close', 'Kelimeyi yazamazsın, sahtekâr görür! 🤫'));
+      this.emitTo(p, 'chat:message', this.note('close', 'impostorNoWord'));
       return;
     }
 
@@ -477,7 +533,7 @@ export class Room {
         this.correctGuess(p);
         return;
       }
-      if (isClose(guess, target)) this.emitTo(p, 'chat:message', this.msg('close', `"${text}" çok yakın!`));
+      if (isClose(guess, target)) this.emitTo(p, 'chat:message', this.note('close', 'close', { text }));
     }
 
     this.io.to(this.code).emit('chat:message', this.msg('chat', text, p));
@@ -492,7 +548,7 @@ export class Room {
     const drawer = this.drawerId ? this.findPlayer(this.drawerId) : undefined;
     if (drawer) this.addPoints(drawer, DRAWER_POINTS_PER_GUESS);
 
-    this.io.to(this.code).emit('chat:message', this.msg('correct', `${p.name} kelimeyi bildi! (+${points})`));
+    this.io.to(this.code).emit('chat:message', this.note('correct', 'guessed', { name: p.name, points }));
     if (this.word) this.emitTo(p, 'word:secret', this.word);
     this.broadcastState();
     this.checkAllGuessed();
@@ -599,7 +655,7 @@ export class Room {
         finished: (laughs) => this.endTelephone(laughs),
       },
     );
-    this.system('Kırık Telefon başladı! Önce herkes bir şey yazsın ✍️');
+    this.system('telephoneStarted');
     this.telephone.start();
   }
 
@@ -609,7 +665,8 @@ export class Room {
     for (const p of this.players) p.score = laughs[p.id] ?? 0;
     this.phase = 'gameEnd';
     const top = [...this.players].sort((a, b) => b.score - a.score)[0];
-    this.system(top && top.score > 0 ? `Günün Komedyeni: ${top.name} 😂` : 'Kırık Telefon bitti! 📞');
+    if (top && top.score > 0) this.system('comedian', { name: top.name });
+    else this.system('telephoneOver');
     this.broadcastState();
   }
 
@@ -669,7 +726,11 @@ export class Room {
         pickWord: () => {
           const [word] = pickWords(wordPool(this.settings), this.usedWords, 1);
           this.usedWords.add(word);
-          return { word, category: this.settings.category === CUSTOM_ONLY_CATEGORY ? 'Özel kelime' : categoryOf(word) };
+          return {
+            word,
+            category:
+              this.settings.category === CUSTOM_ONLY_CATEGORY ? CUSTOM_ONLY_CATEGORY : categoryOf(word, this.settings.language),
+          };
         },
         award: (gains) => {
           for (const [id, points] of Object.entries(gains)) {
@@ -677,11 +738,11 @@ export class Room {
             if (p) p.score += points;
           }
         },
-        system: (text) => this.system(text),
+        system: (key, vars) => this.system(key, vars),
         finished: () => this.endImpostor(),
       },
     );
-    this.system('Sahtekâr başladı! Aranızda kelimeyi bilmeyen biri var 🕵️');
+    this.system('impostorStarted');
     this.impostor.start();
   }
 
@@ -691,7 +752,7 @@ export class Room {
     this.phase = 'gameEnd';
     this.round = this.settings.rounds;
     const winner = [...this.players].sort((a, b) => b.score - a.score)[0];
-    if (winner) this.system(`Oyun bitti! Kazanan: ${winner.name} 🏆`);
+    if (winner) this.system('winner', { name: winner.name });
     this.broadcastState();
   }
 
@@ -734,14 +795,14 @@ export class Room {
     shuffled.forEach((p, i) => {
       this.teamOf.set(p.id, TEAM_IDS[i % 2]);
     });
-    this.system('Takımlar karıştırıldı 🔀');
+    this.system('teamsShuffled');
     this.broadcastState();
   }
 
   private startTeams(): void {
     const short = TEAM_IDS.find((team) => this.teamMembers(team).filter((p) => p.socketId).length < TEAMS.minPerTeam);
     if (short) {
-      this.system(`Her takımda en az ${TEAMS.minPerTeam} oyuncu olmalı (${TEAM_NAMES[short]} eksik).`);
+      this.system('teamsNeedPlayers', { count: TEAMS.minPerTeam, team: short });
       return;
     }
     this.stopTicker();
@@ -777,10 +838,10 @@ export class Room {
         const p = this.findPlayer(id);
         if (p) p.score += points;
       },
-      system: (text) => this.system(text),
+      system: (key, vars) => this.system(key, vars),
       finished: (score) => this.endTeams(score),
     });
-    this.system('Çizim Yarışı başladı! İlk bilen takım turu alır 🏁');
+    this.system('teamsStarted');
     this.teamRace.start();
   }
 
@@ -790,11 +851,8 @@ export class Room {
     this.teamScore = score;
     this.phase = 'gameEnd';
     const winner = score.red === score.blue ? null : score.red > score.blue ? 'red' : 'blue';
-    this.system(
-      winner
-        ? `Oyun bitti! ${TEAM_NAMES[winner]} takım kazandı 🏆 (${score.red}–${score.blue})`
-        : `Oyun bitti! Berabere 🤝 (${score.red}–${score.blue})`,
-    );
+    if (winner) this.system('teamWon', { team: winner, red: score.red, blue: score.blue });
+    else this.system('teamDraw', { red: score.red, blue: score.blue });
     this.broadcastState();
   }
 
@@ -813,10 +871,10 @@ export class Room {
         break;
       }
       case 'close':
-        this.emitTo(p, 'chat:message', this.msg('close', `"${text}" çok yakın!`));
+        this.emitTo(p, 'chat:message', this.note('close', 'close', { text }));
         break;
       case 'blocked':
-        this.emitTo(p, 'chat:message', this.msg('close', 'Kelimeyi yazamazsın, çizerek anlat! ✏️'));
+        this.emitTo(p, 'chat:message', this.note('close', 'drawerNoWord'));
         break;
       case 'correct':
         break;
@@ -914,10 +972,15 @@ export class Room {
   }
 
   private msg(kind: ChatKind, text: string, from?: Player): ChatMessage {
-    return { id: ++this.msgId, kind, text, name: from?.name, color: from?.avatar.color };
+    return { id: ++this.msgId, kind, text, name: from?.name, color: from?.avatar.color, from: from?.id };
   }
 
-  private system(text: string): void {
-    this.io.to(this.code).emit('chat:message', this.msg('system', text));
+  /** Sunucunun hazır mesajı: metin yerine kimlik gider, her oyuncu kendi dilinde görür. */
+  private note(kind: ChatKind, key: MessageKey, vars?: MessageVars): ChatMessage {
+    return { id: ++this.msgId, kind, text: '', key, vars };
+  }
+
+  private system(key: MessageKey, vars?: MessageVars): void {
+    this.io.to(this.code).emit('chat:message', this.note('system', key, vars));
   }
 }

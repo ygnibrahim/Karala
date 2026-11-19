@@ -1,5 +1,5 @@
 // Oyunun sabit değerleri: avatarlar, ayar seçenekleri, kategoriler.
-import type { GameMode, Settings } from './types';
+import type { GameMode, Lang, ReportReason, Settings } from './types';
 
 export const AVATAR_COLORS = [
   '#ff6b6b',
@@ -35,8 +35,11 @@ export const AVATAR_FACES = [
   '🐿️',
 ];
 
+export const LANGUAGES: readonly Lang[] = ['tr', 'en'];
+
 export const DEFAULT_SETTINGS: Settings = {
   mode: 'classic',
+  language: 'tr',
   rounds: 3,
   drawTime: 80,
   category: 'karisik',
@@ -48,51 +51,39 @@ export const ROUND_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
 export const DRAW_TIME_OPTIONS = [45, 60, 80, 100, 120, 150];
 export const MAX_PLAYER_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 12];
 
-export const GAME_MODES: { id: GameMode; name: string; description: string; minPlayers: number }[] = [
-  { id: 'classic', name: '🎨 Klasik', description: 'Sırayla biri çizer, diğerleri tahmin eder.', minPlayers: 2 },
-  {
-    id: 'telephone',
-    name: '📞 Kırık Telefon',
-    description: 'Herkes aynı anda yazar, çizer, tahmin eder; sonunda zincirler gösterilir.',
-    minPlayers: 3,
-  },
-  {
-    id: 'impostor',
-    name: '🕵️ Sahtekâr',
-    description: 'Biri kelimeyi bilmiyor! Sırayla birer çizgi çizin, sonra sahtekârı oylayın.',
-    minPlayers: 3,
-  },
-  {
-    id: 'teams',
-    name: '🏁 Çizim Yarışı',
-    description: 'İki takım aynı kelimeyi aynı anda çizer; ilk bilen takım turu alır.',
-    minPlayers: 4,
-  },
+/** Oyun modları. Görünen adları ve açıklamaları istemcide çevrilir (client/src/i18n). */
+export const GAME_MODES: { id: GameMode; minPlayers: number }[] = [
+  { id: 'classic', minPlayers: 2 },
+  { id: 'telephone', minPlayers: 3 },
+  { id: 'impostor', minPlayers: 3 },
+  { id: 'teams', minPlayers: 4 },
 ];
 
 export const TEAM_IDS = ['red', 'blue'] as const;
-export const TEAM_NAMES: Record<(typeof TEAM_IDS)[number], string> = { red: '🔴 Kırmızı', blue: '🔵 Mavi' };
 
 /** "Sadece özel kelimeler" kategorisinin kimliği. */
 export const CUSTOM_ONLY_CATEGORY = 'ozel';
 
-export const CATEGORIES: { id: string; name: string }[] = [
-  { id: 'karisik', name: 'Karışık' },
-  { id: 'hayvanlar', name: 'Hayvanlar' },
-  { id: 'yiyecekler', name: 'Yiyecek & İçecek' },
-  { id: 'esyalar', name: 'Eşyalar' },
-  { id: 'meslekler', name: 'Meslekler' },
-  { id: 'yerler', name: 'Yerler & Doğa' },
-  { id: 'eylemler', name: 'Eylemler' },
-  { id: 'tasitlar', name: 'Taşıtlar' },
-  { id: 'spor', name: 'Spor & Oyun' },
-  { id: 'vucut', name: 'Vücut & Kıyafet' },
-  { id: 'fantastik', name: 'Masal & Fantastik' },
-  { id: 'teknoloji', name: 'Teknoloji & Bilim' },
-  { id: 'muzik', name: 'Müzik & Sanat' },
-  { id: 'turkiye', name: "Türkiye'den" },
-  { id: CUSTOM_ONLY_CATEGORY, name: 'Sadece özel kelimeler' },
+/** Kelime kategorileri. Görünen adları istemcide çevrilir; kelime listeleri sunucuda dil başına tutulur. */
+export const CATEGORIES: { id: string }[] = [
+  { id: 'karisik' },
+  { id: 'hayvanlar' },
+  { id: 'yiyecekler' },
+  { id: 'esyalar' },
+  { id: 'meslekler' },
+  { id: 'yerler' },
+  { id: 'eylemler' },
+  { id: 'tasitlar' },
+  { id: 'spor' },
+  { id: 'vucut' },
+  { id: 'fantastik' },
+  { id: 'teknoloji' },
+  { id: 'muzik' },
+  { id: 'turkiye' },
+  { id: CUSTOM_ONLY_CATEGORY },
 ];
+
+export const REPORT_REASONS: readonly ReportReason[] = ['abuse', 'drawing', 'spam', 'other'];
 
 /** Gizli oturum anahtarının biçimi: istemci üretir, sunucu doğrular. */
 export const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;

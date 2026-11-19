@@ -1,5 +1,6 @@
 // Üst bardaki kelime alanı: aşamaya göre ipucu, gizli kelime ya da açıklanan kelime.
 import type { RoomState } from '@shared';
+import { useT } from '../../i18n';
 
 interface Props {
   room: RoomState;
@@ -8,14 +9,14 @@ interface Props {
 }
 
 export default function WordArea({ room, secret, iAmDrawer }: Props) {
-  if (room.phase === 'choosing') return <span className="muted">Kelime seçiliyor…</span>;
+  const t = useT();
+  if (room.phase === 'choosing') return <span className="muted">{t('game.choosingWord')}</span>;
   if (room.phase === 'turnEnd') return <span className="word-reveal">{room.turnResult?.word || '—'}</span>;
 
   if (secret) {
     return (
       <span className={`word-secret${iAmDrawer ? '' : ' guessed'}`}>
-        {iAmDrawer ? 'Çiz: ' : '✅ '}
-        {secret}
+        {iAmDrawer ? t('game.drawThis', { word: secret }) : `✅ ${secret}`}
       </span>
     );
   }

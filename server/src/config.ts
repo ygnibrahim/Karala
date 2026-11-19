@@ -125,5 +125,19 @@ export const TEAM_SCORING = {
   drawer: 1,
 } as const;
 
+export const MODERATION = {
+  /** Odadaki diğer oyuncuların en az bu oranı aynı kişiyi bildirirse kişi odadan çıkarılır. */
+  autoKickRatio: 0.5,
+  /** Otomatik çıkarma için gereken en az bildirim (2 kişilik odada tek kişi birini atamasın). */
+  minReportsForAutoKick: 2,
+  /** Bildirime bağlam olarak eklenen son mesaj sayısı. */
+  recentMessages: 8,
+  /**
+   * İsteğe bağlı: bildirimlerin gönderileceği adres (ör. Discord/Slack webhook). Boşsa sadece sunucu
+   * kaydına yazılır. Render'da ortam değişkeni olarak tanımlanır; asla koda yazılmaz.
+   */
+  reportWebhookUrl: process.env.REPORT_WEBHOOK_URL?.trim() || null,
+} as const;
+
 /** İpucu harflerinin açıldığı süre oranları. */
 export const HINT_THRESHOLDS = [0.5, 0.7, 0.85] as const;

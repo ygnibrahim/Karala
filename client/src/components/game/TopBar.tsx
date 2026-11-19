@@ -1,5 +1,6 @@
 // Oyun ekranlarının üst barı: sol başlık, ortada içerik, sağda ses ve sayaç, altta zaman çubuğu.
 import type { ReactNode } from 'react';
+import { useT } from '../../i18n';
 import SoundToggle from '../common/SoundToggle';
 
 interface Props {
@@ -14,14 +15,21 @@ interface Props {
 }
 
 export default function TopBar({ title, children, seconds, progress, urgent = false, onLeave }: Props) {
+  const t = useT();
   const confirmLeave = () => {
-    if (confirm('Oyundan çıkmak istiyor musun?')) onLeave();
+    if (confirm(t('game.leaveConfirm'))) onLeave();
   };
 
   return (
     <header className="topbar">
       <div className="round">
-        <button type="button" className="icon-btn small" onClick={confirmLeave} title="Çık" aria-label="Oyundan çık">
+        <button
+          type="button"
+          className="icon-btn small"
+          onClick={confirmLeave}
+          title={t('common.leave')}
+          aria-label={t('game.leaveLabel')}
+        >
           ✕
         </button>
         <span>{title}</span>

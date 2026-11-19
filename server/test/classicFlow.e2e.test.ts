@@ -2,11 +2,16 @@
 // Süreler testlerde kısaltılmıştır (vitest.config.mts → CHOOSE_MS=1500, TURN_END_MS=300).
 import type { RoomState } from '@shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { WORDS_EN } from '../src/game/wordListEn';
 import {
   type Client,
+  connectClient,
+  create,
   eventsOf,
   type Game,
+  join,
   nextEvent,
+  payload,
   settle,
   setupRoom,
   startServer,
@@ -119,5 +124,36 @@ describe('oda yaşam döngüsü', () => {
     game.others[0].socket.disconnect();
     await settle(2500);
     expect(ts.server.rooms.size).toBe(0);
+  });
+});
+
+describe('oda dili', () => {
+  it('odayı kuranın dili odanın kelime dili olur; oda sahibi değiştirebilir, kelimeler o dilden gelir', async () => {
+    const host = await connectClient(ts);
+    const created = await create(host, payload('Ann', { lang: 'en' }));
+    if (!created.ok) throw new Error(created.error);
+    expect(lastState(host).settings.language).toBe('en');
+    const guest = await connectClient(ts);
+    await join(guest, payload('Bob', { code: created.code }));
+    // Sonradan katılanın dili odayı değiştirmez.
+    expect(lastState(host).settings.language).toBe('en');
+
+    host.emit('room:settings', { category: 'hayvanlar' });
+    await waitForState(host, (s) => s.settings.category === 'hayvanlar');
+    const from = host.log.length;
+    host.emit('game:start');
+    const choosing = await nextEvent<RoomState>(host, 'room:state', (s) => s.phase === 'choosing', from);
+    const drawer = choosing.drawerId === created.playerId ? host : guest;
+    const choices = await nextEvent<string[]>(drawer, 'word:choices');
+    for (const w of choices) expect(WORDS_EN.hayvanlar).toContain(w);
+  });
+
+  it('geçersiz dil ayarı yok sayılır', async () => {
+    const game = await setupRoom(ts, 1);
+    game.host.emit('room:settings', { language: 'de' });
+    await settle();
+    expect(lastState(game.host).settings.language).toBe('tr');
+    game.host.emit('room:settings', { language: 'en' });
+    await waitForState(game.host, (s) => s.settings.language === 'en');
   });
 });

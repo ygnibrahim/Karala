@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useT } from '../../i18n';
 import { useInstall } from '../../lib/pwa';
 
 export default function InstallButton() {
+  const t = useT();
   const { mode, install } = useInstall();
   const [showIosHelp, setShowIosHelp] = useState(false);
 
@@ -11,13 +13,9 @@ export default function InstallButton() {
     return (
       <div className="install">
         <button type="button" className="btn btn-install" onClick={() => setShowIosHelp((v) => !v)}>
-          📲 Ana ekrana ekle
+          {t('home.addToHome')}
         </button>
-        {showIosHelp && (
-          <p className="install-help">
-            Safari'de alttaki <b>Paylaş</b> <span aria-hidden>⬆️</span> butonuna dokun, sonra <b>Ana Ekrana Ekle</b>'yi seç.
-          </p>
-        )}
+        {showIosHelp && <p className="install-help">{t('home.iosHelp')}</p>}
       </div>
     );
   }
@@ -25,7 +23,7 @@ export default function InstallButton() {
   return (
     <div className="install">
       <button type="button" className="btn btn-install" onClick={install}>
-        📲 Uygulamayı yükle
+        {t('home.install')}
       </button>
     </div>
   );

@@ -100,7 +100,14 @@ describe('sanitizeJoin', () => {
       sessionId: SESSION,
       name: 'Ayşe',
       avatar: { color: AVATAR_COLORS[2], face: AVATAR_FACES[3] },
+      lang: 'tr',
     });
+  });
+
+  it('dil bilgisini doğrular; İngilizce oyuncunun geçersiz adı "Player" olur', () => {
+    expect(sanitizeJoin({ sessionId: SESSION, name: 'Ann', lang: 'en' })?.lang).toBe('en');
+    expect(sanitizeJoin({ sessionId: SESSION, name: 'Ann', lang: 'fr' })?.lang).toBe('tr');
+    expect(sanitizeJoin({ sessionId: SESSION, name: 42, lang: 'en' })?.name).toBe('Player');
   });
 
   it.each([

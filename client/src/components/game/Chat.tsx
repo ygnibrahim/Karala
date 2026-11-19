@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { messageText, useT } from '../../i18n';
+import { useMuted } from '../../lib/muted';
 import { socket } from '../../lib/socket';
 import type { GameData } from '../../types';
 
@@ -11,6 +13,8 @@ interface Props {
 
 export default function Chat({ data, compact = false, placeholder: customPlaceholder }: Props) {
   const { room, meId, messages } = data;
+  const t = useT();
+  const muted = useMuted();
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +26,7 @@ export default function Chat({ data, compact = false, placeholder: customPlaceho
   const me = room.players.find((p) => p.id === meId);
   const drawing = room.phase === 'drawing';
   const insider = drawing && (room.drawerId === meId || !!me?.guessed);
-  const placeholder = customPlaceholder ?? (!drawing ? 'Mesaj yaz…' : insider ? 'Sadece bilenler görür…' : 'Tahminini yaz…');
+  const placeholder = customPlaceholder ?? (!drawing ? t('chat.placeholder') : insider ? t('chat.insider') : t('chat.guess'));
 
   const send = () => {
     const t = text.trim();
@@ -34,12 +38,14 @@ export default function Chat({ data, compact = false, placeholder: customPlaceho
   return (
     <div className={`chat${compact ? ' compact' : ''}`}>
       <div className="chat-list" ref={listRef}>
-        {messages.map((m) => (
-          <div key={m.id} className={`msg msg-${m.kind}`}>
-            {m.name && <b style={{ color: m.color }}>{m.name}: </b>}
-            {m.text}
-          </div>
-        ))}
+        {messages
+          .filter((m) => !m.from || !muted.has(m.from))
+          .map((m) => (
+            <div key={m.id} className={`msg msg-${m.kind}`}>
+              {m.name && <b style={{ color: m.color }}>{m.name}: </b>}
+              {messageText(m)}
+            </div>
+          ))}
       </div>
       <form
         className="chat-input"
@@ -58,7 +64,7 @@ export default function Chat({ data, compact = false, placeholder: customPlaceho
           autoCorrect="off"
           onChange={(e) => setText(e.target.value)}
         />
-        <button className="btn btn-primary" type="submit" aria-label="Gönder">
+        <button className="btn btn-primary" type="submit" aria-label={t('common.send')}>
           ➤
         </button>
       </form>

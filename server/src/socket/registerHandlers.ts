@@ -1,6 +1,6 @@
 // Her socket bağlantısı için olay işleyicileri.
 // Görevleri: istek sınırlama, gelen veriyi doğrulama ve doğru odaya iletme. Oyun kuralları Room'da.
-import type { AckResult, JoinPayload } from '@shared';
+import { type AckResult, type JoinPayload, REPORT_REASONS, type ReportReason } from '@shared';
 import { IP_RATE_LIMITS, RATE_LIMITS } from '../config';
 import type { GameSocket, IO, Room } from '../game/Room';
 import type { RoomManager } from '../game/RoomManager';
@@ -10,7 +10,6 @@ import { clientIp } from './clientIp';
 import { KeyedRateLimiter } from './KeyedRateLimiter';
 import { RateLimiter } from './RateLimiter';
 
-const TOO_FAST = 'Çok hızlı! Biraz bekleyip tekrar dene.';
 /** Reddedilen çizimlerden sonra çizenin ekranı en fazla bu sıklıkta yeniden eşitlenir. */
 const RESYNC_INTERVAL_MS = 500;
 
@@ -31,8 +30,8 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
     /** Socket'i bir odaya sokar. Başka bir odadaysa ancak yeni odaya girebildikten sonra eskisinden çıkar. */
     const enter = (target: Room, payload: unknown): AckResult => {
       const info = sanitizeJoin(payload);
-      if (!info) return { ok: false, error: 'Geçersiz bilgi.' };
-      const result = target.join(socket, info.sessionId, info.name, info.avatar);
+      if (!info) return { ok: false, error: 'invalid' };
+      const result = target.join(socket, info.sessionId, info.name, info.avatar, info.lang);
       if (!result.ok) return result;
       if (room && room !== target && playerId) room.remove(playerId, socket);
       room = target;
@@ -58,9 +57,9 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
 
     socket.on('room:create', (payload: JoinPayload, ack: (r: AckResult) => void) => {
       if (typeof ack !== 'function') return;
-      if (!limiter.take('room') || !ipLimiter.take(ip, 'room')) return ack({ ok: false, error: TOO_FAST });
+      if (!limiter.take('room') || !ipLimiter.take(ip, 'room')) return ack({ ok: false, error: 'tooFast' });
       const newRoom = rooms.create();
-      if (!newRoom) return ack({ ok: false, error: 'Sunucu şu an çok yoğun, birazdan tekrar dene.' });
+      if (!newRoom) return ack({ ok: false, error: 'busy' });
       const result = enter(newRoom, payload);
       if (!result.ok) rooms.discard(newRoom);
       ack(result);
@@ -68,10 +67,10 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
 
     socket.on('room:join', (payload: JoinPayload, ack: (r: AckResult) => void) => {
       if (typeof ack !== 'function') return;
-      if (!limiter.take('room')) return ack({ ok: false, error: TOO_FAST });
+      if (!limiter.take('room')) return ack({ ok: false, error: 'tooFast' });
       const code = sanitizeRoomCode((payload as Partial<JoinPayload> | undefined)?.code);
       const target = code ? rooms.get(code) : undefined;
-      if (!target) return ack({ ok: false, error: 'Böyle bir oda bulunamadı.' });
+      if (!target) return ack({ ok: false, error: 'notFound' });
       ack(enter(target, payload));
     });
 
@@ -91,6 +90,14 @@ export function registerHandlers(io: IO, rooms: RoomManager): void {
       'room:kick',
       asPlayer('action', (r, id, target: unknown) => {
         if (typeof target === 'string') r.kick(id, target);
+      }),
+    );
+    socket.on(
+      'player:report',
+      asPlayer('action', (r, id, target: unknown, reason: unknown) => {
+        if (typeof target === 'string' && REPORT_REASONS.includes(reason as ReportReason)) {
+          r.report(id, target, reason as ReportReason);
+        }
       }),
     );
     socket.on(

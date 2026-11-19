@@ -1,7 +1,7 @@
 // Sahtekâr modu: her turda bir oyuncu gizlice sahtekârdır ve kelimeyi bilmez (sadece kategoriyi bilir).
 // Herkes ortak tuvale sırayla tek bir çizgi çizer, sonra sahtekâr oylanır.
 // Yakalanan sahtekâr kelimeyi tahmin ederek kurtulabilir.
-import type { DrawOp, ImpostorPublic, ImpostorResult, ImpostorRole, ImpostorStage } from '@shared';
+import type { DrawOp, ImpostorPublic, ImpostorResult, ImpostorRole, ImpostorStage, MessageKey, MessageVars } from '@shared';
 import { IMPOSTOR, IMPOSTOR_SCORING } from '../config';
 import { pickRandom, randomItem } from '../utils/random';
 import { normalizeGuess } from '../utils/text';
@@ -21,7 +21,7 @@ export interface ImpostorHooks {
   newCanvas(): void;
   pickWord(): { word: string; category: string };
   award(gains: Record<string, number>): void;
-  system(text: string): void;
+  system(key: MessageKey, vars?: MessageVars): void;
   finished(): void;
 }
 
@@ -154,7 +154,7 @@ export class ImpostorGame {
       this.finishRound(false);
       return;
     }
-    this.hooks.system('Sahtekâr yakalandı! 🕵️ Kelimeyi tahmin ederse kurtulacak…');
+    this.hooks.system('impostorCaughtGuessing');
     this.setStage('guess', IMPOSTOR.guessMs, () => this.finishRound(false));
   }
 
@@ -164,14 +164,11 @@ export class ImpostorGame {
     const gains = impostorGains(this.participants, this.impostorId, votes, caught, guessedRight);
     this.hooks.award(gains);
     this.result = { impostorId: this.impostorId, word: this.word, votes, caught, guess, guessedRight, gains };
-    const name = this.hooks.find(this.impostorId)?.name ?? 'Sahtekâr';
-    this.hooks.system(
-      !caught
-        ? `${name} sahtekârdı ve kaçtı! 🕵️ Kelime "${this.word}" idi.`
-        : guessedRight
-          ? `${name} yakalandı ama kelimeyi bildi: "${this.word}"!`
-          : `${name} yakalandı! Kelime "${this.word}" idi. 🎉`,
-    );
+    const name = this.hooks.find(this.impostorId)?.name ?? '?';
+    this.hooks.system(!caught ? 'impostorEscaped' : guessedRight ? 'impostorCaughtButKnew' : 'impostorCaught', {
+      name,
+      word: this.word,
+    });
     this.setStage('result', IMPOSTOR.resultMs, () => this.nextRound());
   }
 

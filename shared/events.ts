@@ -1,10 +1,13 @@
 // Socket.IO olaylarının imzaları: istemci ve sunucu bu sözleşmeye göre konuşur.
 import type { DrawItem, DrawOp } from './drawing';
+import type { ErrorCode } from './messages';
 import type {
   Avatar,
   ChatMessage,
   ImpostorRole,
+  Lang,
   ReactionKind,
+  ReportReason,
   RevealData,
   RoomState,
   Settings,
@@ -18,9 +21,11 @@ export interface JoinPayload {
   /** Tarayıcı sekmesine özel gizli oturum anahtarı. Asla başka oyunculara gönderilmez. */
   sessionId: string;
   code?: string;
+  /** Oyuncunun arayüz dili: yeni odanın kelime dili buna göre başlar. */
+  lang?: Lang;
 }
 
-export type AckResult = { ok: true; code: string; playerId: string } | { ok: false; error: string };
+export type AckResult = { ok: true; code: string; playerId: string } | { ok: false; error: ErrorCode };
 
 export interface ClientToServer {
   'room:create': (p: JoinPayload, ack: (r: AckResult) => void) => void;
@@ -29,6 +34,8 @@ export interface ClientToServer {
   'room:settings': (s: Partial<Settings>) => void;
   /** Oda sahibi bir oyuncuyu odadan çıkarır. */
   'room:kick': (playerId: string) => void;
+  /** Bir oyuncuyu uygunsuz davranış için bildirir. */
+  'player:report': (playerId: string, reason: ReportReason) => void;
   'game:start': () => void;
   'game:restart': () => void;
   'word:choose': (index: number) => void;

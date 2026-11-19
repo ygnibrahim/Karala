@@ -5,10 +5,12 @@ import Chat from '../components/game/Chat';
 import LobbyPlayers from '../components/lobby/LobbyPlayers';
 import SettingsPanel from '../components/lobby/SettingsPanel';
 import TeamPicker, { teamsReady } from '../components/lobby/TeamPicker';
+import { useT } from '../i18n';
 import { inviteLink } from '../lib/session';
 import type { GameData } from '../types';
 
 export default function Lobby({ data }: { data: GameData }) {
+  const t = useT();
   const { room, meId } = data;
   const isHost = !!room.players.find((p) => p.id === meId)?.isHost;
   const connectedCount = room.players.filter((p) => p.connected).length;
@@ -19,7 +21,7 @@ export default function Lobby({ data }: { data: GameData }) {
     const link = inviteLink(room.code);
     try {
       if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
-        await navigator.share({ title: 'Karala', text: 'Gel birlikte çizelim!', url: link });
+        await navigator.share({ title: 'Karala', text: t('lobby.shareText'), url: link });
       } else {
         await navigator.clipboard.writeText(link);
         setCopied(true);
@@ -34,16 +36,16 @@ export default function Lobby({ data }: { data: GameData }) {
     <div className="lobby">
       <header className="lobby-head">
         <button type="button" className="btn btn-ghost btn-small" onClick={data.leave}>
-          ← Çık
+          {t('lobby.leave')}
         </button>
         <div className="room-code">
-          <span className="muted small">Oda kodu</span>
+          <span className="muted small">{t('lobby.roomCode')}</span>
           <strong>{room.code}</strong>
         </div>
         <div className="head-actions">
           <SoundToggle />
           <button type="button" className="btn btn-secondary btn-small" onClick={shareInvite}>
-            {copied ? '✓ Kopyalandı' : '🔗 Davet et'}
+            {copied ? t('lobby.copied') : t('lobby.invite')}
           </button>
         </div>
       </header>

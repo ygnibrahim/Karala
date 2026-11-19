@@ -1,11 +1,16 @@
 // Ayarlara göre kelime havuzunu oluşturur ve tekrarsız kelime seçer.
-import { CATEGORIES, CUSTOM_ONLY_CATEGORY, type Settings } from '@shared';
+import { CUSTOM_ONLY_CATEGORY, type Lang, type Settings } from '@shared';
 import { pickRandom } from '../utils/random';
 import { WORDS } from './wordList';
+import { WORDS_EN } from './wordListEn';
 
-export function wordPool(settings: Pick<Settings, 'category' | 'customWords'>): string[] {
+/** Dil → kategori → kelimeler. */
+export const WORD_LISTS: Record<Lang, Record<string, string[]>> = { tr: WORDS, en: WORDS_EN };
+
+export function wordPool(settings: Pick<Settings, 'category' | 'customWords' | 'language'>): string[] {
   if (settings.category === CUSTOM_ONLY_CATEGORY) return settings.customWords;
-  const base = WORDS[settings.category] ?? WORDS.karisik;
+  const lists = WORD_LISTS[settings.language] ?? WORDS;
+  const base = lists[settings.category] ?? lists.karisik;
   return [...new Set([...base, ...settings.customWords])];
 }
 
@@ -22,10 +27,10 @@ export function pickWords(pool: readonly string[], used: Set<string>, n: number)
   return pickRandom(fresh, n);
 }
 
-/** Kelimenin hangi kategoriden geldiği (Sahtekâr modunda sahtekârın tek ipucu). */
-export function categoryOf(word: string): string {
-  for (const [id, list] of Object.entries(WORDS)) {
-    if (id !== 'karisik' && list.includes(word)) return CATEGORIES.find((c) => c.id === id)?.name ?? 'Karışık';
+/** Kelimenin geldiği kategorinin kimliği (Sahtekâr modunda sahtekârın tek ipucu); listede yoksa özel kelime. */
+export function categoryOf(word: string, language: Lang = 'tr'): string {
+  for (const [id, list] of Object.entries(WORD_LISTS[language] ?? WORDS)) {
+    if (id !== 'karisik' && list.includes(word)) return id;
   }
-  return 'Özel kelime';
+  return CUSTOM_ONLY_CATEGORY;
 }

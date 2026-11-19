@@ -13,6 +13,7 @@ const EXACT = new Set(
     am amk amq aq mk sg oç oc piç pic göt götü götün götünü gotu sik sikk sikim siki sikini yarak taşak tasak
     puşt pust ibne ipne kahpe gavat pezo yavşak yavsak kaltak sürtük surtuk fahişe fahise şıllık sillik orospu
     orosbu orspu amcık amcik yarrak dalyarak pezevenk pezeveng sikerim sikeyim siktir amına amina
+    ass arse shit shits dick cock cunt fag fags twat wank prick slut whore piss tits boobs nigga stfu wtf fck fk
   `),
 );
 
@@ -22,6 +23,8 @@ const PREFIXES = words(`
   siktig sikiş sikis sikik sikici sikko yarrak yarağ yarag dalyarak dalyarag pezevenk pezeveng kahpe yavşak
   yavsak kaltak sürtük surtuk fahişe fahise ibneli ibnelik götveren gotveren götoş gotos taşşak tassak şerefsiz
   serefsiz piçlik piclik puştluk pustluk gavatlık gavatlik ananı anani ananızı ananizi bacını bacini
+  fuck shitt shith shitf bitch bastard asshole arsehole dickhead motherf nigger faggot whore slutty wanker cunts
+  bullshit dumbass jackass retard
 `);
 
 /** Rakam/simgeyle harf taklidi. */

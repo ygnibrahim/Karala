@@ -1,5 +1,6 @@
 // Çizen oyuncunun araç çubuğu: renkler, şekiller, kalınlık ve araçlar.
 import { createElement } from 'react';
+import { useT } from '../../i18n';
 import { COLORS, SHAPE_TOOLS, SIZES, type Tool } from './tools';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function Toolbar({ tool, color, size, onTool, onColor, onSize, onUndo, onClear, noEditing = false }: Props) {
+  const t = useT();
   // Beyaz seçiliyken ikonlar görünsün diye gri göster.
   const iconColor = color === '#ffffff' ? '#adb5bd' : color;
 
@@ -28,7 +30,7 @@ export default function Toolbar({ tool, color, size, onTool, onColor, onSize, on
             key={c}
             className={`color${c === color && tool !== 'eraser' ? ' active' : ''}`}
             style={{ background: c }}
-            aria-label={`Renk ${c}`}
+            aria-label={t('common.color', { color: c })}
             onClick={() => {
               onColor(c);
               if (tool === 'eraser') onTool('pen');
@@ -37,15 +39,15 @@ export default function Toolbar({ tool, color, size, onTool, onColor, onSize, on
         ))}
       </div>
 
-      <fieldset className="shapes" aria-label="Şekiller">
-        {SHAPE_TOOLS.map((t) => (
+      <fieldset className="shapes" aria-label={t('board.shapes')}>
+        {SHAPE_TOOLS.map((s) => (
           <button
             type="button"
-            key={t.id}
-            className={`shape${tool === t.id ? ' active' : ''}`}
-            onClick={() => onTool(t.id)}
-            title={t.title}
-            aria-label={t.title}
+            key={s.id}
+            className={`shape${tool === s.id ? ' active' : ''}`}
+            onClick={() => onTool(s.id)}
+            title={t(`shape.${s.id}`)}
+            aria-label={t(`shape.${s.id}`)}
           >
             <svg
               viewBox="0 0 24 24"
@@ -58,25 +60,25 @@ export default function Toolbar({ tool, color, size, onTool, onColor, onSize, on
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              {createElement(t.svg.tag, t.svg.attrs)}
+              {createElement(s.svg.tag, s.svg.attrs)}
             </svg>
           </button>
         ))}
       </fieldset>
 
       <div className="tool-group">
-        {SIZES.map((s) => (
+        {SIZES.map((n) => (
           <button
             type="button"
-            key={s}
-            className={`tool size${s === size ? ' active' : ''}`}
-            onClick={() => onSize(s)}
-            aria-label={`Kalınlık ${s}`}
+            key={n}
+            className={`tool size${n === size ? ' active' : ''}`}
+            onClick={() => onSize(n)}
+            aria-label={t('board.size', { n })}
           >
             <span
               style={{
-                width: Math.max(4, s / 1.6),
-                height: Math.max(4, s / 1.6),
+                width: Math.max(4, n / 1.6),
+                height: Math.max(4, n / 1.6),
                 background: tool === 'eraser' ? '#adb5bd' : color,
               }}
             />
@@ -85,15 +87,15 @@ export default function Toolbar({ tool, color, size, onTool, onColor, onSize, on
       </div>
 
       <div className="tool-group">
-        <ToolButton active={tool === 'pen'} onClick={() => onTool('pen')} title="Kalem" icon="✏️" />
-        <ToolButton active={tool === 'eraser'} onClick={() => onTool('eraser')} title="Silgi" icon="🧽" />
-        <ToolButton active={tool === 'fill'} onClick={() => onTool('fill')} title="Boya kovası" icon="🪣" />
+        <ToolButton active={tool === 'pen'} onClick={() => onTool('pen')} title={t('board.pen')} icon="✏️" />
+        <ToolButton active={tool === 'eraser'} onClick={() => onTool('eraser')} title={t('board.eraser')} icon="🧽" />
+        <ToolButton active={tool === 'fill'} onClick={() => onTool('fill')} title={t('board.fill')} icon="🪣" />
       </div>
 
       {!noEditing && (
         <div className="tool-group">
-          <ToolButton onClick={onUndo} title="Geri al" icon="↶" />
-          <ToolButton onClick={onClear} title="Hepsini sil" icon="🗑️" />
+          <ToolButton onClick={onUndo} title={t('board.undo')} icon="↶" />
+          <ToolButton onClick={onClear} title={t('board.clear')} icon="🗑️" />
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 // Tuvalin üstündeki katman: kelime seçimi ve tur sonucu.
 import type { RoomState } from '@shared';
+import { type Key, useT } from '../../i18n';
 import { socket } from '../../lib/socket';
 import AvatarBadge from '../common/AvatarBadge';
 
@@ -10,11 +11,11 @@ interface Props {
   seconds: number;
 }
 
-const END_REASON = {
-  allGuessed: 'Herkes bildi! 🎉',
-  drawerLeft: 'Çizen oyuncu ayrıldı',
-  time: 'Süre doldu ⏰',
-} as const;
+const END_REASON: Record<'allGuessed' | 'drawerLeft' | 'time', Key> = {
+  allGuessed: 'game.endAllGuessed',
+  drawerLeft: 'game.endDrawerLeft',
+  time: 'game.endTime',
+};
 
 export default function TurnOverlay({ room, iAmDrawer, choices, seconds }: Props) {
   if (room.phase === 'choosing') {
@@ -25,10 +26,11 @@ export default function TurnOverlay({ room, iAmDrawer, choices, seconds }: Props
 }
 
 function WordChoice({ choices, seconds }: { choices: string[]; seconds: number }) {
+  const t = useT();
   return (
     <div className="overlay-card your-turn">
-      <div className="your-turn-badge">🎨 Senin sıran!</div>
-      <h3>Çizeceğin kelimeyi seç</h3>
+      <div className="your-turn-badge">{t('game.yourTurn')}</div>
+      <h3>{t('game.pickWord')}</h3>
       <div className="choices">
         {choices.map((word, i) => (
           <button
@@ -42,25 +44,25 @@ function WordChoice({ choices, seconds }: { choices: string[]; seconds: number }
           </button>
         ))}
       </div>
-      <p className="muted small">{seconds} sn içinde seçmezsen rastgele seçilecek</p>
+      <p className="muted small">{t('game.autoPick', { n: seconds })}</p>
     </div>
   );
 }
 
 function WaitingForDrawer({ room }: { room: RoomState }) {
+  const t = useT();
   const drawer = room.players.find((p) => p.id === room.drawerId);
   return (
     <div className="overlay-card">
       {drawer && <AvatarBadge avatar={drawer.avatar} size={64} />}
-      <h3>{drawer?.name ?? 'Biri'} kelime seçiyor…</h3>
-      <p className="muted">
-        Tur {room.round}/{room.settings.rounds}
-      </p>
+      <h3>{t('game.isChoosing', { name: drawer?.name ?? t('common.someone') })}</h3>
+      <p className="muted">{t('common.round', { round: room.round, total: room.settings.rounds })}</p>
     </div>
   );
 }
 
 function TurnResult({ room }: { room: RoomState }) {
+  const t = useT();
   const result = room.turnResult;
   if (!result) return null;
   const gain = (id: string) => result.gains[id] ?? 0;
@@ -68,10 +70,10 @@ function TurnResult({ room }: { room: RoomState }) {
 
   return (
     <div className="overlay-card">
-      <p className="muted">{END_REASON[result.reason]}</p>
+      <p className="muted">{t(END_REASON[result.reason])}</p>
       {result.word && (
         <h3>
-          Kelime: <span className="word-reveal">{result.word}</span>
+          {t('common.word')} <span className="word-reveal">{result.word}</span>
         </h3>
       )}
       <ul className="gains">

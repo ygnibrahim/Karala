@@ -2,6 +2,7 @@
 import type { AckResult, ChatMessage, ImpostorRole, JoinPayload, RevealData, RoomState, TelephoneTask } from '@shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { messageFx, stateFx } from './effects/gameFx';
+import { getLang, useT } from './i18n';
 import { keepServerAwake, reconnectOnReturn } from './lib/connection';
 import {
   getActiveRoom,
@@ -16,7 +17,7 @@ import {
 import { socket } from './lib/socket';
 import Game from './screens/Game';
 import GameEnd from './screens/GameEnd';
-import Home from './screens/Home';
+import Home, { type HomeError } from './screens/Home';
 import Impostor from './screens/Impostor';
 import Lobby from './screens/Lobby';
 import Reveal from './screens/Reveal';
@@ -33,6 +34,7 @@ const MAX_MESSAGES = 150;
 const sessionId = getSessionId();
 
 export default function App() {
+  const t = useT();
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [room, setRoom] = useState<RoomState | null>(null);
   const [meId, setMeId] = useState('');
@@ -45,7 +47,7 @@ export default function App() {
   const [role, setRole] = useState<ImpostorRole | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(socket.connected);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<HomeError | null>(null);
   const [busy, setBusy] = useState(false);
   /** Davet linkindeki oda kodu (?oda=KOD). */
   const [inviteCode, setInviteCode] = useState(roomFromUrl);
@@ -92,7 +94,7 @@ export default function App() {
       }
       socket
         .timeout(ACK_TIMEOUT_MS)
-        .emit('room:join', { ...loadProfile(), sessionId, code }, (err: Error | null, res?: AckResult) => {
+        .emit('room:join', { ...loadProfile(), sessionId, code, lang: getLang() }, (err: Error | null, res?: AckResult) => {
           if (!err && res?.ok) return handleAck(res);
           if (err) return; // yanıt gelmedi: bağlantı geri gelince yeniden denenir
           // Oda artık yok (ör. sunucu yeniden başladı): uyarı göstermeden ana ekrana dön.
@@ -120,7 +122,7 @@ export default function App() {
     };
     const onKicked = () => {
       resetRoom();
-      setError('Oda sahibi seni odadan çıkardı.');
+      setError('kickedByHost');
     };
     const onMessage = (m: ChatMessage) => {
       messageFx(m);
@@ -164,12 +166,15 @@ export default function App() {
     saveProfile(profile);
     setBusy(true);
     setMessages([]);
-    const payload: JoinPayload = { ...profile, sessionId, code };
+    const payload: JoinPayload = { ...profile, sessionId, code, lang: getLang() };
     // Yanıt hiç gelmezse buton takılı kalmasın.
     socket
       .timeout(ACK_TIMEOUT_MS)
       .emit(mode === 'create' ? 'room:create' : 'room:join', payload, (err: Error | null, res?: AckResult) => {
-        handleAck(err || !res ? { ok: false, error: 'Sunucuya ulaşılamadı, tekrar dene.' } : res);
+        if (err || !res) {
+          setBusy(false);
+          setError('unreachable');
+        } else handleAck(res);
       });
   };
 
@@ -204,7 +209,7 @@ export default function App() {
 
   return (
     <>
-      {!connected && <div className="banner">Sunucuya bağlanılıyor…</div>}
+      {!connected && <div className="banner">{t('common.connecting')}</div>}
       {screen}
     </>
   );

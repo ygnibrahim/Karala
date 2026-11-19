@@ -1,22 +1,24 @@
 // Çizim Yarışı ekranı: iki takımın çizenleri aynı kelimeyi aynı anda kendi takımına çizer.
 // Herkes sadece kendi takımının tuvalini ve sohbetini görür; tur sonunda iki çizim yan yana gösterilir.
-import { type RoomState, TEAM_IDS, TEAM_NAMES, type TeamId, type TeamRacePublic, type TeamsPublic } from '@shared';
+import { type RoomState, TEAM_IDS, type TeamId, type TeamRacePublic, type TeamsPublic } from '@shared';
 import { useEffect } from 'react';
 import Board from '../components/board/Board';
 import AnimatedNumber from '../components/common/AnimatedNumber';
 import AvatarBadge from '../components/common/AvatarBadge';
 import DrawingView from '../components/common/DrawingView';
-import KickButton from '../components/common/KickButton';
+import PlayerActions from '../components/common/PlayerActions';
 import Chat from '../components/game/Chat';
 import TopBar from '../components/game/TopBar';
 import { play } from '../effects/sound';
 import { useCountdown } from '../hooks/useCountdown';
+import { useT } from '../i18n';
 import type { GameData } from '../types';
 
 const URGENT_SECONDS = 10;
 const TICK_SECONDS = 5;
 
 export default function TeamRace({ data }: { data: GameData }) {
+  const t = useT();
   const { room, meId, secret, stateAt } = data;
   const teams = room.teams;
   const race = teams?.race;
@@ -33,19 +35,20 @@ export default function TeamRace({ data }: { data: GameData }) {
   // Önceki turun kelimesi ekranda kalmasın: sadece bu turun çizeni kelimeyi görür.
   const word = iAmDrawer ? secret : null;
   const nameOf = (id: string | null | undefined) => room.players.find((p) => p.id === id)?.name ?? '—';
+  const teamName = (team: TeamId) => t(`team.${team}`);
 
   const placeholder = !myTeam
-    ? 'Sadece izliyorsun'
+    ? t('race.chatSpectator')
     : race.stage === 'result'
-      ? 'Herkese yaz…'
+      ? t('race.chatAll')
       : iAmDrawer
-        ? 'Takımına yaz…'
-        : 'Takımına tahmin yaz…';
+        ? t('race.chatDrawer')
+        : t('race.chatGuess');
 
   return (
     <div className={`game team-race${myTeam ? ` team-${myTeam}` : ''}`}>
       <TopBar
-        title={`Tur ${race.turn}/${race.totalTurns}`}
+        title={t('common.round', { round: race.turn, total: race.totalTurns })}
         seconds={seconds}
         progress={progress}
         urgent={drawing && seconds <= URGENT_SECONDS}
@@ -73,10 +76,10 @@ export default function TeamRace({ data }: { data: GameData }) {
           <Scoreboard score={teams.score} />
           <span className="muted small">
             {!myTeam
-              ? '👀 İzliyorsun'
+              ? t('common.spectating')
               : iAmDrawer
-                ? `✏️ ${TEAM_NAMES[myTeam]} takımına sen çiziyorsun`
-                : `${TEAM_NAMES[myTeam]} · ${nameOf(race.drawers[myTeam])} çiziyor`}
+                ? t('race.youDraw', { team: teamName(myTeam) })
+                : t('race.teammateDraws', { team: teamName(myTeam), name: nameOf(race.drawers[myTeam]) })}
           </span>
         </div>
       </main>
@@ -89,8 +92,9 @@ export default function TeamRace({ data }: { data: GameData }) {
 }
 
 function Scoreboard({ score }: { score: Record<TeamId, number> }) {
+  const t = useT();
   return (
-    <span className="scoreboard" role="img" aria-label={`Kırmızı ${score.red}, Mavi ${score.blue}`}>
+    <span className="scoreboard" role="img" aria-label={t('race.score', { red: score.red, blue: score.blue })}>
       <span className="team-dot red">🔴</span>
       <b>
         <AnimatedNumber value={score.red} />
@@ -106,9 +110,10 @@ function Scoreboard({ score }: { score: Record<TeamId, number> }) {
 
 /** Üst barda: çizene kelime, tahmin edenlere ipucu harfleri, tur sonunda kelimenin kendisi. */
 function TeamWord({ room, race, word }: { room: RoomState; race: TeamRacePublic; word: string | null }) {
+  const t = useT();
   if (race.stage === 'result') return <span className="word-reveal">{race.result?.word}</span>;
-  if (word) return <span className="word-secret">Çiz: {word}</span>;
-  if (race.stage === 'intro') return <span className="muted">Hazır ol!</span>;
+  if (word) return <span className="word-secret">{t('game.drawThis', { word })}</span>;
+  if (race.stage === 'intro') return <span className="muted">{t('race.ready')}</span>;
   if (!room.hint) return null;
   return (
     <span className="hint">
@@ -134,11 +139,10 @@ function Intro({
   word: string | null;
   nameOf: (id: string | null) => string;
 }) {
+  const t = useT();
   return (
     <div className="overlay-card team-intro">
-      <p className="muted">
-        Tur {race.turn}/{race.totalTurns}
-      </p>
+      <p className="muted">{t('common.round', { round: race.turn, total: race.totalTurns })}</p>
       <div className="versus">
         <span className="team-chip red">🔴 {nameOf(race.drawers.red)}</span>
         <b>⚔️</b>
@@ -146,20 +150,12 @@ function Intro({
       </div>
       {word ? (
         <>
-          <p>Takımına çiz:</p>
+          <p>{t('race.drawForTeam')}</p>
           <div className="imp-word">{word}</div>
-          <p className="muted small">Rakip takım da aynı kelimeyi çiziyor. Hızlı ol! 🏁</p>
+          <p className="muted small">{t('race.rivalSameWord')}</p>
         </>
       ) : (
-        <p>
-          {myTeam ? (
-            <>
-              <b>{nameOf(race.drawers[myTeam])}</b> sizin için çizecek. İlk bilen takım turu alır!
-            </>
-          ) : (
-            'İki takım aynı kelimeyi çiziyor…'
-          )}
-        </p>
+        <p>{myTeam ? t('race.drawsForYou', { name: nameOf(race.drawers[myTeam]) }) : t('race.bothDrawing')}</p>
       )}
     </div>
   );
@@ -174,25 +170,26 @@ function Result({
   myTeam: TeamId | undefined;
   nameOf: (id: string | null) => string;
 }) {
+  const t = useT();
   const r = race.result;
   if (!r) return null;
   const headline = !r.winner
-    ? '⏱ Süre doldu, kimse bilemedi!'
+    ? t('race.timeUp')
     : r.winner === myTeam
-      ? `🎉 Takımın kazandı! ${nameOf(r.guesserId)} bildi`
-      : `${TEAM_NAMES[r.winner]} kazandı · ${nameOf(r.guesserId)} bildi`;
+      ? t('race.youWon', { name: nameOf(r.guesserId) })
+      : t('race.theyWon', { team: t(`team.${r.winner}`), name: nameOf(r.guesserId) });
   return (
     <div className="overlay-card team-result">
       <p className="team-headline">{headline}</p>
       <p>
-        Kelime: <span className="word-reveal">{r.word}</span>
+        {t('common.word')} <span className="word-reveal">{r.word}</span>
       </p>
       <div className="team-drawings">
         {TEAM_IDS.map((team) => (
           <figure key={team} className={`team-drawing ${team}${r.winner === team ? ' winner' : ''}`}>
             <DrawingView drawing={r.drawings[team]} />
             <figcaption>
-              {TEAM_NAMES[team]}
+              {t(`team.${team}`)}
               {r.winner === team && ' 🏆'}
             </figcaption>
           </figure>
@@ -214,6 +211,7 @@ function TeamRoster({
   meId: string;
   myTeam: TeamId | undefined;
 }) {
+  const t = useT();
   const viewerIsHost = !!room.players.find((p) => p.id === meId)?.isHost;
   const order = myTeam === 'blue' ? (['blue', 'red'] as const) : TEAM_IDS;
   return (
@@ -221,8 +219,8 @@ function TeamRoster({
       {order.map((team) => (
         <section key={team} className={`team-group ${team}`}>
           <h3>
-            <span className="team-name">{team === 'red' ? 'Kırmızı' : 'Mavi'}</span>
-            <b title={`${TEAM_NAMES[team]} puanı`}>{teams.score[team]}</b>
+            <span className="team-name">{t(team === 'red' ? 'team.redShort' : 'team.blueShort')}</span>
+            <b title={t('race.teamScore', { team: t(`team.${team}`) })}>{teams.score[team]}</b>
           </h3>
           <ul className="players">
             {room.players
@@ -238,12 +236,12 @@ function TeamRoster({
                     <span className="pinfo">
                       <span className="name">
                         {p.name}
-                        {p.id === meId && ' (sen)'}
+                        {p.id === meId && ` ${t('common.you')}`}
                       </span>
-                      <span className="score">{p.score} puan</span>
+                      <span className="score">{t('common.points', { n: p.score })}</span>
                     </span>
                     {drawer && <span className="tag">✏️</span>}
-                    <KickButton viewerIsHost={viewerIsHost} viewerId={meId} targetId={p.id} targetName={p.name} />
+                    <PlayerActions viewerIsHost={viewerIsHost} viewerId={meId} targetId={p.id} targetName={p.name} />
                   </li>
                 );
               })}

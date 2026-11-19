@@ -9,6 +9,7 @@ import TurnOverlay from '../components/game/TurnOverlay';
 import WordArea from '../components/game/WordArea';
 import { play } from '../effects/sound';
 import { useCountdown } from '../hooks/useCountdown';
+import { useT } from '../i18n';
 import type { GameData } from '../types';
 
 /** Bu saniyeden itibaren sayaç kırmızıya döner. */
@@ -17,6 +18,7 @@ const URGENT_SECONDS = 10;
 const TICK_SECONDS = 5;
 
 export default function Game({ data }: { data: GameData }) {
+  const t = useT();
   const { room, meId, secret, choices, stateAt } = data;
 
   const drawer = room.players.find((p) => p.id === room.drawerId);
@@ -33,7 +35,7 @@ export default function Game({ data }: { data: GameData }) {
   return (
     <div className="game">
       <TopBar
-        title={`Tur ${room.round}/${room.settings.rounds}`}
+        title={t('common.round', { round: room.round, total: room.settings.rounds })}
         seconds={seconds}
         progress={progress}
         urgent={drawing && seconds <= URGENT_SECONDS}

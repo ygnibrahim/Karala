@@ -1,16 +1,17 @@
-import { TEAM_NAMES } from '@shared';
 import AvatarBadge from '../components/common/AvatarBadge';
+import { useT } from '../i18n';
 import { socket } from '../lib/socket';
 import type { GameData } from '../types';
 
 export default function GameEnd({ data }: { data: GameData }) {
+  const t = useT();
   const { room, meId } = data;
   const ranked = [...room.players].sort((a, b) => b.score - a.score);
   const podium = [ranked[1], ranked[0], ranked[2]]; // 2. - 1. - 3. sırası
   const isHost = room.players.find((p) => p.id === meId)?.isHost;
   const telephone = room.settings.mode === 'telephone';
   // Kırık Telefon'da puan yerine aldığı 😂 sayısı gösterilir.
-  const unit = telephone ? '😂' : 'puan';
+  const unit = telephone ? '😂' : t('common.pointsUnit');
 
   const teams = room.settings.mode === 'teams' ? room.teams : null;
   const winnerTeam = teams
@@ -24,14 +25,18 @@ export default function GameEnd({ data }: { data: GameData }) {
 
   return (
     <div className="end">
-      <h1 className="logo small">{telephone ? 'Günün Komedyeni 😂' : 'Oyun Bitti! 🏆'}</h1>
+      <h1 className="logo small">{telephone ? t('end.comedian') : t('end.title')}</h1>
       {teams && (
         <div className={`card team-final${winnerTeam ? ` ${winnerTeam}` : ''}`}>
-          <b>{winnerTeam ? `${TEAM_NAMES[winnerTeam]} takım kazandı!${winnerTeam === myTeam ? ' 🎉' : ''}` : 'Berabere! 🤝'}</b>
+          <b>
+            {winnerTeam
+              ? `${t('end.teamWon', { team: t(`team.${winnerTeam}`) })}${winnerTeam === myTeam ? ' 🎉' : ''}`
+              : t('end.draw')}
+          </b>
           <span className="team-final-score">
             🔴 {teams.score.red} – {teams.score.blue} 🔵
           </span>
-          <span className="muted small">En iyi oyuncular:</span>
+          <span className="muted small">{t('end.bestPlayers')}</span>
         </div>
       )}
       <div className="podium">
@@ -70,13 +75,13 @@ export default function GameEnd({ data }: { data: GameData }) {
       <div className="end-actions">
         {isHost ? (
           <button type="button" className="btn btn-primary btn-big" onClick={() => socket.emit('game:restart')}>
-            🔁 Tekrar Oyna
+            {t('end.playAgain')}
           </button>
         ) : (
-          <p className="waiting">Oda sahibi yeni oyunu başlatabilir…</p>
+          <p className="waiting">{t('end.waitHost')}</p>
         )}
         <button type="button" className="btn btn-ghost" onClick={data.leave}>
-          Ana menüye dön
+          {t('end.home')}
         </button>
       </div>
     </div>

@@ -1,9 +1,11 @@
 import type { RoomState } from '@shared';
+import { useT } from '../../i18n';
 import AnimatedNumber from '../common/AnimatedNumber';
 import AvatarBadge from '../common/AvatarBadge';
-import KickButton from '../common/KickButton';
+import PlayerActions from '../common/PlayerActions';
 
 export default function PlayerList({ room, meId }: { room: RoomState; meId: string }) {
+  const t = useT();
   const ranked = [...room.players].sort((a, b) => b.score - a.score);
   const viewerIsHost = !!room.players.find((p) => p.id === meId)?.isHost;
   const rankOf = (id: string) => ranked.findIndex((p) => p.id === id) + 1;
@@ -29,23 +31,23 @@ export default function PlayerList({ room, meId }: { room: RoomState; meId: stri
           <span className="pinfo">
             <span className="name">
               {p.name}
-              {p.id === meId && ' (sen)'}
+              {p.id === meId && ` ${t('common.you')}`}
             </span>
             <span className="score">
-              <AnimatedNumber value={p.score} /> puan
+              <AnimatedNumber value={p.score} /> {t('common.pointsUnit')}
             </span>
           </span>
           {p.id === room.drawerId && (
-            <span className="tag" title="Çiziyor">
+            <span className="tag" title={t('game.drawingTag')}>
               ✏️
             </span>
           )}
           {p.guessed && (
-            <span className="tag" title="Bildi">
+            <span className="tag" title={t('game.guessedTag')}>
               ✅
             </span>
           )}
-          <KickButton viewerIsHost={viewerIsHost} viewerId={meId} targetId={p.id} targetName={p.name} />
+          <PlayerActions viewerIsHost={viewerIsHost} viewerId={meId} targetId={p.id} targetName={p.name} />
           {(gains[p.id] ?? 0) > 0 && (
             <span key={`${room.round}-${room.drawerId}`} className="gain-float">
               +{gains[p.id]}

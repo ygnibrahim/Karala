@@ -4,6 +4,7 @@ import { applyOp, CANVAS_H, CANVAS_W, type DrawItem, type DrawOp, type Shape } f
 import { type ReactNode, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { floodFill } from '../../canvas/floodFill';
 import { BG, drawShape, drawStroke, redraw } from '../../canvas/render';
+import { t } from '../../i18n';
 import { socket } from '../../lib/socket';
 import Toolbar from './Toolbar';
 import { findShapeTool, type Tool } from './tools';
@@ -222,7 +223,7 @@ export default function Board({ canDraw, overlay, onOp = sendToRoom, noEditing =
   };
 
   const clearAll = () => {
-    if (itemsRef.current.length && confirm('Tüm çizim silinsin mi?')) send({ t: 'clear' });
+    if (itemsRef.current.length && confirm(t('board.clearConfirm'))) send({ t: 'clear' });
   };
 
   return (

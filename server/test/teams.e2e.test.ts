@@ -89,7 +89,7 @@ describe('Çizim Yarışı: lobi ve takım seçimi', () => {
     expect(
       eventsOf(game.host, 'chat:message')
         .slice(0)
-        .some((m) => (m as ChatMessage).text.includes('karıştırıldı')),
+        .some((m) => (m as ChatMessage).key === 'teamsShuffled'),
     ).toBe(false);
     game.host.emit('team:shuffle');
     const shuffled = await nextEvent<RoomState>(
@@ -113,7 +113,7 @@ describe('Çizim Yarışı: lobi ve takım seçimi', () => {
     game.host.emit('game:start');
     await settle(200);
     expect(lastState(game.host).phase).toBe('lobby');
-    expect(eventsOf(game.host, 'chat:message').some((m) => (m as ChatMessage).text.includes('en az 2 oyuncu'))).toBe(true);
+    expect(eventsOf(game.host, 'chat:message').some((m) => (m as ChatMessage).key === 'teamsNeedPlayers')).toBe(true);
   });
 });
 
@@ -162,7 +162,7 @@ describe('Çizim Yarışı: tur', () => {
     }
 
     red.drawer.socket.emit('chat:send', `ipucu: ${word}`);
-    await nextEvent<ChatMessage>(red.drawer.socket, 'chat:message', (m) => m.kind === 'close' && m.text.includes('yazamazsın'));
+    await nextEvent<ChatMessage>(red.drawer.socket, 'chat:message', (m) => m.kind === 'close' && m.key === 'drawerNoWord');
     await settle();
     expect(eventsOf(red.guessers[0].socket, 'chat:message').some((x) => (x as ChatMessage).text.includes(word))).toBe(false);
   });
@@ -242,7 +242,7 @@ describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
     blue.guessers[0].socket.emit('room:leave');
     const end = await nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'gameEnd', from);
     expect(end.teams?.race).toBeNull();
-    expect(eventsOf(game.host, 'chat:message').some((m) => (m as ChatMessage).text.includes('yeterli oyuncu'))).toBe(true);
+    expect(eventsOf(game.host, 'chat:message').some((m) => (m as ChatMessage).key === 'teamTooSmall')).toBe(true);
   });
 
   it('tüm turlar oynanınca oyun biter, skor görünür; tekrar oynayınca takımlar korunur', async () => {
@@ -269,7 +269,11 @@ describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
     }
     const end = await nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'gameEnd', from);
     expect(end.teams?.score).toEqual({ red: 4, blue: 0 });
-    expect(eventsOf(game.host, 'chat:message').some((m) => (m as ChatMessage).text.includes('Kırmızı takım kazandı'))).toBe(true);
+    expect(
+      eventsOf(game.host, 'chat:message').some(
+        (m) => (m as ChatMessage).key === 'teamWon' && (m as ChatMessage).vars?.team === 'red',
+      ),
+    ).toBe(true);
 
     const membersBefore = end.teams?.members;
     game.host.emit('game:restart');

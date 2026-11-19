@@ -123,7 +123,7 @@ describe('Sahtekâr uçtan uca', () => {
     const crew = s.players.find((p) => !p.role.isImpostor) as Setup['players'][number];
     crew.socket.emit('chat:send', `bence ${s.word.toUpperCase()} çok kolay`);
     const warning = await waitFor<ChatMessage>(crew.socket, 'chat:message', (m) => m.kind === 'close');
-    expect(warning.text).toContain('Kelimeyi yazamazsın');
+    expect(warning.key).toBe('impostorNoWord');
     await settle();
     expect(JSON.stringify(s.impostor.socket.log)).not.toContain(s.word);
   }, 20_000);

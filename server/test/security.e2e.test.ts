@@ -81,8 +81,8 @@ describe('kimlik ve oturum', () => {
   it('geçersiz katılma istekleri reddedilir', async () => {
     const game = await setupRoom(ts, 0);
     const c = await connectClient(ts);
-    expect(await join(c, payload('x', { code: 'ZZZZZ' }))).toEqual({ ok: false, error: 'Böyle bir oda bulunamadı.' });
-    expect(await join(c, payload('x', { code: game.code, sessionId: 'kisa' }))).toEqual({ ok: false, error: 'Geçersiz bilgi.' });
+    expect(await join(c, payload('x', { code: 'ZZZZZ' }))).toEqual({ ok: false, error: 'notFound' });
+    expect(await join(c, payload('x', { code: game.code, sessionId: 'kisa' }))).toEqual({ ok: false, error: 'invalid' });
     expect(await join(c, payload('x', { code: '../../' }))).toMatchObject({ ok: false });
   });
 
@@ -91,7 +91,7 @@ describe('kimlik ve oturum', () => {
     game.host.emit('room:settings', { maxPlayers: 2 });
     await settle();
     const c = await connectClient(ts);
-    expect(await join(c, payload('Üçüncü', { code: game.code }))).toEqual({ ok: false, error: 'Oda dolu.' });
+    expect(await join(c, payload('Üçüncü', { code: game.code }))).toEqual({ ok: false, error: 'full' });
   });
 });
 
@@ -124,7 +124,7 @@ describe('bağlantı ve oda değişimi', () => {
 
     const wanderer = roomA.others[0];
     const res = await join(wanderer.socket, payload('Gezgin', { code: roomB.code }));
-    expect(res).toEqual({ ok: false, error: 'Oda dolu.' });
+    expect(res).toEqual({ ok: false, error: 'full' });
     await settle();
     expect(lastState(eventsOf(roomA.host, 'room:state')).players.map((p) => p.id)).toContain(wanderer.id);
 

@@ -98,3 +98,10 @@
   text-align: center;
   opacity: 0.92;
 }
+
+/* Dar ekranda sağ üstteki dil + ses düğmeleri logonun üstüne binmesin. */
+@media (max-width: 480px) {
+  .home {
+    padding-top: max(64px, calc(env(safe-area-inset-top) + 56px));
+  }
+}

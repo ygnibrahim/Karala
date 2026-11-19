@@ -187,7 +187,7 @@ export class TelephoneGame {
   }
 
   private author(playerId: string): { authorId: string; authorName: string } {
-    return { authorId: playerId, authorName: this.hooks.find(playerId)?.name ?? 'Biri' };
+    return { authorId: playerId, authorName: this.hooks.find(playerId)?.name ?? '?' };
   }
 
   private suggestionFor(playerId: string): string {

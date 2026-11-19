@@ -2,8 +2,10 @@
 import { CANVAS_H, CANVAS_W, type DrawItem } from '@shared';
 import { useEffect, useRef } from 'react';
 import { redraw } from '../../canvas/render';
+import { useT } from '../../i18n';
 
 export default function DrawingView({ drawing, className = '' }: { drawing: DrawItem[]; className?: string }) {
+  const t = useT();
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function DrawingView({ drawing, className = '' }: { drawing: Draw
       height={CANVAS_H}
       className={`drawing-view ${className}`}
       role="img"
-      aria-label={drawing.length ? 'Çizim' : 'Boş çizim'}
+      aria-label={drawing.length ? t('common.drawing') : t('common.emptyDrawing')}
     />
   );
 }

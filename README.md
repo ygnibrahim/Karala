@@ -96,8 +96,18 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
 
 ## Moderasyon
 
-- Sohbetteki küfürler `***` ile maskelenir (harf aralama, rakamla yazma, harf tekrarı gibi kaçamaklar da yakalanır). Küfürlü isim "Oyuncu" olur, küfürlü özel kelimeler listeye alınmaz. Liste: `server/src/moderation/profanity.ts`.
-- Oda sahibi, oyuncu listesindeki ✕ ile birini odadan çıkarabilir; çıkarılan oyuncu aynı odaya geri giremez.
+- Sohbetteki küfürler (Türkçe + İngilizce) `***` ile maskelenir; harf aralama, rakamla yazma, harf tekrarı gibi kaçamaklar da yakalanır. Küfürlü isim "Oyuncu"/"Player" olur, küfürlü özel kelimeler listeye alınmaz. Liste: `server/src/moderation/profanity.ts`.
+- Oyuncu listesindeki **⋯** menüsü:
+  - **🔇 Sessize al:** O kişinin mesajları sadece senin ekranında gizlenir; kişi bunu bilmez.
+  - **🚩 Bildir:** Sebep seçilir (küfür, uygunsuz çizim, spam, diğer). Bildirim, kişinin son mesajlarıyla birlikte sunucu kaydına yazılır (Render → Logs, `player-report`). Gizli oturum anahtarı ve IP yazılmaz. Odadaki diğer oyuncuların **yarısı** aynı kişiyi bildirirse kişi otomatik çıkarılır ve geri giremez.
+  - **🚪 Odadan çıkar** (sadece oda sahibi): Çıkarılan aynı odaya geri giremez.
+- İsteğe bağlı: Render'da `REPORT_WEBHOOK_URL` ortam değişkenine bir Discord/Slack webhook adresi yazılırsa bildirimler oraya da gelir (telefona anlık bildirim).
+
+## Dil
+
+- Arayüz **Türkçe / İngilizce**; her oyuncu ana ekrandan kendi dilini seçer (varsayılan: cihazın dili). Metinler: `client/src/i18n/tr.ts`, `en.ts`.
+- Sunucu cümle göndermez, mesaj kimliği gönderir (`shared/messages.ts`); böylece aynı odada farklı dillerde oynanabilir.
+- Odanın **kelime dili** ayrı bir ayardır (oda sahibi seçer, odayı kuranın diliyle başlar). İngilizce kelimeler: `server/src/game/wordListEn.ts`.
 
 ## Yol haritası
 

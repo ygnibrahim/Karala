@@ -1,5 +1,15 @@
 // Oda sahibinin gönderdiği ayar değişikliklerini doğrular. Geçersiz alanlar yok sayılır.
-import { CATEGORIES, DRAW_TIME_OPTIONS, GAME_MODES, LIMITS, MAX_PLAYER_OPTIONS, ROUND_OPTIONS, type Settings } from '@shared';
+import {
+  CATEGORIES,
+  DRAW_TIME_OPTIONS,
+  GAME_MODES,
+  LANGUAGES,
+  type Lang,
+  LIMITS,
+  MAX_PLAYER_OPTIONS,
+  ROUND_OPTIONS,
+  type Settings,
+} from '@shared';
 import { containsProfanity } from '../moderation/profanity';
 import { cleanText, normalizeGuess } from '../utils/text';
 
@@ -24,6 +34,7 @@ export function applySettings(current: Settings, input: unknown, playerCount: nu
   const next = { ...current };
 
   if (GAME_MODES.some((m) => m.id === s.mode)) next.mode = s.mode as Settings['mode'];
+  if (LANGUAGES.includes(s.language as Lang)) next.language = s.language as Lang;
   next.rounds = pick(s.rounds, ROUND_OPTIONS) ?? next.rounds;
   next.drawTime = pick(s.drawTime, DRAW_TIME_OPTIONS) ?? next.drawTime;
   const maxPlayers = pick(s.maxPlayers, MAX_PLAYER_OPTIONS);

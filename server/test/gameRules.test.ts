@@ -66,8 +66,8 @@ describe('kelime seçimi', () => {
   });
 
   it('"sadece özel kelimeler" modunda yalnız özel kelimeler kullanılır', () => {
-    expect(wordPool({ category: 'ozel', customWords: ['x', 'y'] })).toEqual(['x', 'y']);
-    expect(wordPool({ category: 'hayvanlar', customWords: ['zz'] })).toContain('zz');
+    expect(wordPool({ category: 'ozel', customWords: ['x', 'y'], language: 'tr' })).toEqual(['x', 'y']);
+    expect(wordPool({ category: 'hayvanlar', customWords: ['zz'], language: 'tr' })).toContain('zz');
   });
 });
 

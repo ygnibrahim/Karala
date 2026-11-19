@@ -1,5 +1,5 @@
 // Odaya katılma isteğini ve sohbet metnini doğrular.
-import { AVATAR_COLORS, AVATAR_FACES, type Avatar, LIMITS, SESSION_TOKEN_PATTERN } from '@shared';
+import { AVATAR_COLORS, AVATAR_FACES, type Avatar, LANGUAGES, type Lang, LIMITS, SESSION_TOKEN_PATTERN } from '@shared';
 import { containsProfanity, maskProfanity } from '../moderation/profanity';
 import { cleanText } from '../utils/text';
 
@@ -7,6 +7,8 @@ export interface CleanJoin {
   sessionId: string;
   name: string;
   avatar: Avatar;
+  /** Oyuncunun arayüz dili (yeni odanın kelime dili için). */
+  lang: Lang;
 }
 
 export function sanitizeJoin(input: unknown): CleanJoin | null {
@@ -16,15 +18,16 @@ export function sanitizeJoin(input: unknown): CleanJoin | null {
   // Oturum anahtarı tahmin edilemez olmalı: istemci crypto.randomUUID() ile üretir.
   if (typeof p.sessionId !== 'string' || !SESSION_TOKEN_PATTERN.test(p.sessionId)) return null;
 
+  const lang: Lang = LANGUAGES.includes(p.lang as Lang) ? (p.lang as Lang) : 'tr';
   const cleaned = typeof p.name === 'string' ? cleanText(p.name, LIMITS.nameLength) : '';
   // Küfürlü isim herkese görünmesin.
-  const name = cleaned && !containsProfanity(cleaned) ? cleaned : 'Oyuncu';
+  const name = cleaned && !containsProfanity(cleaned) ? cleaned : lang === 'en' ? 'Player' : 'Oyuncu';
 
   const avatarIn = (p.avatar && typeof p.avatar === 'object' ? p.avatar : {}) as Record<string, unknown>;
   const color = typeof avatarIn.color === 'string' && AVATAR_COLORS.includes(avatarIn.color) ? avatarIn.color : AVATAR_COLORS[0];
   const face = typeof avatarIn.face === 'string' && AVATAR_FACES.includes(avatarIn.face) ? avatarIn.face : AVATAR_FACES[0];
 
-  return { sessionId: p.sessionId, name, avatar: { color, face } };
+  return { sessionId: p.sessionId, name, avatar: { color, face }, lang };
 }
 
 export function sanitizeRoomCode(input: unknown): string | null {

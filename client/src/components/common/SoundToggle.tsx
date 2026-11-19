@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { isMuted, onMutedChange, play, setMuted } from '../../effects/sound';
+import { useT } from '../../i18n';
 
 export default function SoundToggle({ className = '' }: { className?: string }) {
+  const t = useT();
   const [muted, setState] = useState(isMuted);
   useEffect(() => {
     const off = onMutedChange(setState);
@@ -14,8 +16,8 @@ export default function SoundToggle({ className = '' }: { className?: string }) 
     <button
       type="button"
       className={`icon-btn sound-toggle ${className}`}
-      title={muted ? 'Sesi aç' : 'Sesi kapat'}
-      aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}
+      title={muted ? t('common.soundOn') : t('common.soundOff')}
+      aria-label={muted ? t('common.soundOn') : t('common.soundOff')}
       onClick={() => {
         setMuted(!muted);
         if (muted) play('pop');

@@ -76,3 +76,46 @@ describe('küfür filtresi', () => {
     expect(maskProfanity('s i k t i r')).toBe('***');
   });
 });
+
+describe('English profanity filter', () => {
+  it.each([
+    'fuck',
+    'FUCK',
+    'f.u.c.k',
+    'fuuuck',
+    'motherfucker',
+    'shit',
+    'bullshit',
+    'shitty',
+    'shithead',
+    'bitch',
+    'asshole',
+    'ass',
+    'dick',
+    'cunt',
+    'wtf',
+  ])('catches: %s', (w) => {
+    expect(containsProfanity(w)).toBe(true);
+  });
+
+  it.each([
+    'class',
+    'assist',
+    'passage',
+    'bass guitar',
+    'cocktail',
+    'dickens',
+    'scunthorpe',
+    'shiitake mushroom',
+    'fukara',
+    'pascal',
+    'grass',
+    'hello there',
+  ])('does not flag: %s', (w) => {
+    expect(containsProfanity(w)).toBe(false);
+  });
+
+  it('masks English profanity in chat', () => {
+    expect(maskProfanity('what the fuck is that')).not.toContain('fuck');
+  });
+});

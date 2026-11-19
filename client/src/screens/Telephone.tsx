@@ -4,17 +4,18 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import Board from '../components/board/Board';
 import AvatarBadge from '../components/common/AvatarBadge';
 import DrawingView from '../components/common/DrawingView';
-import KickButton from '../components/common/KickButton';
+import PlayerActions from '../components/common/PlayerActions';
 import TopBar from '../components/game/TopBar';
 import { play } from '../effects/sound';
 import { useCountdown } from '../hooks/useCountdown';
+import { type Key, useT } from '../i18n';
 import { socket } from '../lib/socket';
 import type { GameData } from '../types';
 
-const STEP_TITLE: Record<TelephoneStepKind, string> = {
-  write: '✍️ Bir şey yaz',
-  draw: '🎨 Çiz',
-  guess: '🤔 Bu ne?',
+const STEP_TITLE: Record<TelephoneStepKind, Key> = {
+  write: 'tp.write',
+  draw: 'tp.draw',
+  guess: 'tp.guess',
 };
 
 /** Süre bitmeden bu kadar önce yazılan metin kendiliğinden gönderilir. */
@@ -23,6 +24,7 @@ const AUTO_SUBMIT_MS = 1000;
 const DRAW_FLUSH_MS = 150;
 
 export default function Telephone({ data }: { data: GameData }) {
+  const t = useT();
   const { room, meId, task, stateAt } = data;
   const tp = room.telephone;
   const { timeLeftMs, seconds, progress } = useCountdown(room, stateAt);
@@ -39,20 +41,20 @@ export default function Telephone({ data }: { data: GameData }) {
   return (
     <div className="tp">
       <TopBar
-        title={`Adım ${tp.step + 1}/${tp.totalSteps}`}
+        title={t('tp.step', { step: tp.step + 1, total: tp.totalSteps })}
         seconds={seconds}
         progress={progress}
         urgent={urgent}
         onLeave={data.leave}
       >
-        <span className="tp-title">{STEP_TITLE[tp.kind]}</span>
+        <span className="tp-title">{t(STEP_TITLE[tp.kind])}</span>
       </TopBar>
 
       <main className="tp-main">
         {!isParticipant ? (
           <div className="card tp-card center">
-            <h2>👀 İzliyorsun</h2>
-            <p className="muted">Bu tur başladıktan sonra geldin. Zincirler gösterilirken sen de izleyebilirsin!</p>
+            <h2>{t('common.spectating')}</h2>
+            <p className="muted">{t('tp.lateJoin')}</p>
           </div>
         ) : done || !task ? (
           <Waiting room={room} />
@@ -69,6 +71,7 @@ export default function Telephone({ data }: { data: GameData }) {
 }
 
 function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: number }) {
+  const t = useT();
   const [text, setText] = useState('');
   const sentRef = useRef(false);
   const drawing = task.prompt && 'drawing' in task.prompt ? task.prompt.drawing : null;
@@ -95,13 +98,13 @@ function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: numbe
     <form className={`card tp-card${drawing ? ' with-drawing' : ''}`} onSubmit={onSubmit}>
       {drawing ? (
         <>
-          <h2>Bu çizim ne olabilir?</h2>
+          <h2>{t('tp.whatIsIt')}</h2>
           <DrawingView drawing={drawing} className="tp-drawing" />
         </>
       ) : (
         <>
-          <h2>Arkadaşların çizecek bir şey yaz</h2>
-          <p className="muted small">Komik, garip, çizmesi zor… ne istersen! Fikrin yoksa 🎲'a bas.</p>
+          <h2>{t('tp.writePrompt')}</h2>
+          <p className="muted small">{t('tp.writeHint')}</p>
         </>
       )}
       <div className="tp-input-row">
@@ -109,7 +112,7 @@ function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: numbe
           className="input"
           value={text}
           maxLength={LIMITS.chatLength}
-          placeholder={drawing ? 'Tahminin…' : 'ör. buzdolabında dans eden penguen'}
+          placeholder={drawing ? t('tp.guessPlaceholder') : t('tp.writePlaceholder')}
           autoComplete="off"
           enterKeyHint="send"
           onChange={(e) => setText(e.target.value)}
@@ -118,8 +121,8 @@ function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: numbe
           <button
             type="button"
             className="icon-btn"
-            title="Öneri"
-            aria-label="Rastgele öneri"
+            title={t('tp.suggestion')}
+            aria-label={t('tp.randomSuggestion')}
             onClick={() => setText(task.suggestion ?? '')}
           >
             🎲
@@ -127,13 +130,14 @@ function TextStep({ task, timeLeftMs }: { task: TelephoneTask; timeLeftMs: numbe
         )}
       </div>
       <button type="submit" className="btn btn-primary btn-big" disabled={!text.trim()}>
-        Gönder ✓
+        {t('tp.submit')}
       </button>
     </form>
   );
 }
 
 function DrawStep({ task }: { task: TelephoneTask }) {
+  const t = useT();
   const [sending, setSending] = useState(false);
   const prompt = task.prompt && 'text' in task.prompt ? task.prompt.text : '';
   const sendOp = (op: DrawOp) => socket.emit('tp:draw', task.step, op);
@@ -147,25 +151,24 @@ function DrawStep({ task }: { task: TelephoneTask }) {
   return (
     <div className="tp-draw">
       <div className="tp-prompt">
-        Çiz: <strong>{prompt}</strong>
+        {t('tp.drawPrompt')} <strong>{prompt}</strong>
       </div>
       <Board canDraw={!sending} onOp={sendOp} />
       <button type="button" className="btn btn-primary btn-big" disabled={sending} onClick={finish}>
-        Bitirdim ✓
+        {t('tp.done')}
       </button>
     </div>
   );
 }
 
 function Waiting({ room }: { room: RoomState }) {
+  const t = useT();
   const tp = room.telephone;
   if (!tp) return null;
   return (
     <div className="card tp-card center">
-      <h2>✅ Gönderildi!</h2>
-      <p className="muted">
-        Diğerleri bekleniyor… ({tp.submitted.length}/{tp.participants.length})
-      </p>
+      <h2>{t('tp.sent')}</h2>
+      <p className="muted">{t('tp.waiting', { n: tp.submitted.length, total: tp.participants.length })}</p>
       <div className="tp-dots" aria-hidden="true">
         <span />
         <span />
@@ -176,6 +179,7 @@ function Waiting({ room }: { room: RoomState }) {
 }
 
 function PlayerProgress({ room, meId }: { room: RoomState; meId: string }) {
+  const t = useT();
   const tp = room.telephone;
   const viewerIsHost = !!room.players.find((p) => p.id === meId)?.isHost;
   if (!tp) return null;
@@ -189,10 +193,10 @@ function PlayerProgress({ room, meId }: { room: RoomState; meId: string }) {
           <li key={id} className={`${finished ? 'done' : ''}${p.connected ? '' : ' offline'}${id === meId ? ' me' : ''}`}>
             <AvatarBadge avatar={p.avatar} size={32} />
             <span className="name">{p.name}</span>
-            <span role="img" aria-label={finished ? 'bitirdi' : 'düşünüyor'}>
+            <span role="img" aria-label={finished ? t('tp.finished') : t('tp.thinking')}>
               {finished ? '✅' : '✏️'}
             </span>
-            <KickButton viewerIsHost={viewerIsHost} viewerId={meId} targetId={id} targetName={p.name} />
+            <PlayerActions viewerIsHost={viewerIsHost} viewerId={meId} targetId={id} targetName={p.name} />
           </li>
         );
       })}

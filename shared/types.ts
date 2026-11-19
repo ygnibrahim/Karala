@@ -1,5 +1,6 @@
 // Oda ve oyuncu durumunun tipleri.
 import type { DrawItem } from './drawing';
+import type { MessageKey, MessageVars } from './messages';
 
 /**
  * Klasik mod: choosing → drawing → turnEnd (tekrar) → gameEnd.
@@ -27,8 +28,13 @@ export interface PublicPlayer {
   isHost: boolean;
 }
 
+/** Arayüz ve kelime dili. */
+export type Lang = 'tr' | 'en';
+
 export interface Settings {
   mode: GameMode;
+  /** Odanın kelime dili: kelime havuzu buna göre seçilir. Arayüz dili her oyuncunun kendi seçimidir. */
+  language: Lang;
   rounds: number;
   drawTime: number;
   category: string;
@@ -145,7 +151,7 @@ export interface ImpostorPublic {
   /** Kaçıncı tur dönüş (1'den başlar). */
   lap: number;
   totalLaps: number;
-  /** Kelimenin kategorisi: herkes görür (sahtekârın tek ipucu). */
+  /** Kelimenin kategori kimliği (CATEGORIES; özel kelimede "ozel"): herkes görür, sahtekârın tek ipucu. */
   category: string;
   /** Oy vermiş oyuncular (kime verdiği gizli). */
   voted: string[];
@@ -157,6 +163,7 @@ export interface ImpostorRole {
   round: number;
   isImpostor: boolean;
   word: string | null;
+  /** Kategori kimliği (bkz. ImpostorPublic.category). */
   category: string;
 }
 
@@ -199,9 +206,18 @@ export type ChatKind = 'chat' | 'system' | 'correct' | 'close' | 'insider';
 export interface ChatMessage {
   id: number;
   kind: ChatKind;
+  /** Oyuncu mesajının metni. Sunucunun hazır mesajlarında boştur; onlar `key` ile gelir. */
   text: string;
+  /** Sunucunun hazır mesajı: istemci oyuncunun dilinde gösterir. */
+  key?: MessageKey;
+  vars?: MessageVars;
   name?: string;
   color?: string;
+  /** Mesajı yazan oyuncunun herkese açık kimliği (sistem mesajlarında yok). Sessize alma için. */
+  from?: string;
 }
+
+/** Bir oyuncuyu bildirme sebebi. */
+export type ReportReason = 'abuse' | 'drawing' | 'spam' | 'other';
 
 export type ReactionKind = 'like' | 'dislike';

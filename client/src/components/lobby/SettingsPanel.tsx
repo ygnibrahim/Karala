@@ -4,6 +4,8 @@ import {
   CUSTOM_ONLY_CATEGORY,
   DRAW_TIME_OPTIONS,
   GAME_MODES,
+  LANGUAGES,
+  type Lang,
   LIMITS,
   MAX_PLAYER_OPTIONS,
   type PublicSettings,
@@ -11,6 +13,7 @@ import {
   type Settings,
 } from '@shared';
 import { useEffect, useRef, useState } from 'react';
+import { type Key, useT } from '../../i18n';
 import { socket } from '../../lib/socket';
 
 interface Props {
@@ -24,6 +27,7 @@ interface Props {
 }
 
 export default function SettingsPanel({ settings: s, isHost, customWords, connectedCount, teamsReady }: Props) {
+  const t = useT();
   const [wordsText, setWordsText] = useState(customWords.join(', '));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,8 +45,10 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
 
   return (
     <section className="card">
-      <h2>Ayarlar {!isHost && <span className="muted small">(oda sahibi değiştirebilir)</span>}</h2>
-      <fieldset className="modes" aria-label="Oyun modu" disabled={!isHost}>
+      <h2>
+        {t('settings.title')} {!isHost && <span className="muted small">{t('settings.hostOnly')}</span>}
+      </h2>
+      <fieldset className="modes" aria-label={t('settings.mode')} disabled={!isHost}>
         {GAME_MODES.map((m) => (
           <button
             type="button"
@@ -51,16 +57,16 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
             aria-pressed={m.id === s.mode}
             onClick={() => update({ mode: m.id })}
           >
-            <b>{m.name}</b>
-            <span>{m.description}</span>
-            <small>en az {m.minPlayers} oyuncu</small>
+            <b>{t(`mode.${m.id}.name`)}</b>
+            <span>{t(`mode.${m.id}.description`)}</span>
+            <small>{t('settings.minPlayers', { n: m.minPlayers })}</small>
           </button>
         ))}
       </fieldset>
       <div className="settings">
         {!telephone && (
           <NumberSelect
-            label={s.mode === 'teams' ? 'Herkes kaç kez çizsin' : 'Tur sayısı'}
+            label={s.mode === 'teams' ? t('settings.drawsEach') : t('settings.rounds')}
             value={s.rounds}
             options={ROUND_OPTIONS}
             disabled={!isHost}
@@ -69,26 +75,36 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
         )}
         {s.mode !== 'impostor' && (
           <NumberSelect
-            label={telephone ? 'Çizim adımı süresi' : 'Çizim süresi'}
+            label={telephone ? t('settings.stepTime') : t('settings.drawTime')}
             value={s.drawTime}
             options={DRAW_TIME_OPTIONS}
-            suffix=" sn"
+            suffix={` ${t('common.seconds', { n: '' }).trim()}`}
             disabled={!isHost}
             onChange={(drawTime) => update({ drawTime })}
           />
         )}
         <label>
-          {telephone ? 'Öneri kategorisi' : 'Kategori'}
+          {t('settings.wordLanguage')}
+          <select disabled={!isHost} value={s.language} onChange={(e) => update({ language: e.target.value as Lang })}>
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {t(`lang.${l}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {telephone ? t('settings.promptCategory') : t('settings.category')}
           <select disabled={!isHost} value={s.category} onChange={(e) => update({ category: e.target.value })}>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {t(c.id === CUSTOM_ONLY_CATEGORY ? 'category.ozelOnly' : (`category.${c.id}` as Key))}
               </option>
             ))}
           </select>
         </label>
         <NumberSelect
-          label="En fazla oyuncu"
+          label={t('settings.maxPlayers')}
           value={s.maxPlayers}
           options={MAX_PLAYER_OPTIONS}
           disabled={!isHost}
@@ -97,42 +113,35 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
 
         {isHost ? (
           <label className="wide">
-            Özel kelimeler <span className="muted small">(virgülle ayır · {s.customWordCount} kelime · sadece sen görürsün)</span>
+            {t('settings.customWords')}{' '}
+            <span className="muted small">{t('settings.customWordsHint', { n: s.customWordCount })}</span>
             <textarea
               ref={textareaRef}
               rows={3}
               maxLength={LIMITS.customWordCount * (LIMITS.customWordLength + 2)}
-              placeholder="ör. Ahmet'in arabası, kampüs kantini, yaz tatili"
+              placeholder={t('settings.customWordsPlaceholder')}
               value={wordsText}
               onChange={(e) => setWordsText(e.target.value)}
               onBlur={() => update({ customWords: wordsText.split(/[,\n]/) })}
             />
           </label>
         ) : (
-          s.customWordCount > 0 && (
-            <p className="wide muted small">🤫 Oda sahibi {s.customWordCount} özel kelime ekledi. Sürpriz olsun diye gizli!</p>
-          )
+          s.customWordCount > 0 && <p className="wide muted small">{t('settings.customWordsHidden', { n: s.customWordCount })}</p>
         )}
       </div>
 
       {isHost ? (
         <button type="button" className="btn btn-primary btn-big" disabled={!canStart} onClick={() => socket.emit('game:start')}>
-          ▶ Oyunu Başlat
+          {t('settings.start')}
         </button>
       ) : (
-        <p className="waiting">Oda sahibinin oyunu başlatması bekleniyor…</p>
+        <p className="waiting">{t('settings.waitingHost')}</p>
       )}
       {isHost && !enoughPlayers && (
-        <p className="muted small center">
-          {mode.name} için en az {mode.minPlayers} oyuncu gerekli. Davet linkini paylaş!
-        </p>
+        <p className="muted small center">{t('settings.needPlayers', { mode: t(`mode.${mode.id}.name`), n: mode.minPlayers })}</p>
       )}
-      {isHost && enoughPlayers && !teamsReady && (
-        <p className="muted small center">Her takımda en az 2 oyuncu olmalı. "🔀 Karıştır" ile dengeleyebilirsin.</p>
-      )}
-      {isHost && customOnly && s.customWordCount < 3 && (
-        <p className="muted small center">Sadece özel kelimelerle oynamak için en az 3 kelime ekle.</p>
-      )}
+      {isHost && enoughPlayers && !teamsReady && <p className="muted small center">{t('settings.teamsUnbalanced')}</p>}
+      {isHost && customOnly && s.customWordCount < 3 && <p className="muted small center">{t('settings.needCustomWords')}</p>}
     </section>
   );
 }

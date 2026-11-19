@@ -127,7 +127,7 @@ describe('klasik mod: kopma ve geri dönme', () => {
     const back = await reconnect(ts, guest.socket, 'Misafir', guest.sessionId, game.code);
     expect(back.res.ok).toBe(true);
     await settle();
-    expect((eventsOf(game.host, 'chat:message') as ChatMessage[]).some((m) => m.text.includes('geri döndü'))).toBe(true);
+    expect((eventsOf(game.host, 'chat:message') as ChatMessage[]).some((m) => m.key === 'returned')).toBe(true);
     expect(lastState(game.host).players.find((p) => p.id === guest.id)?.connected).toBe(true);
   });
 });

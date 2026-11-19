@@ -2,6 +2,7 @@
 import type { ReactionKind } from '@shared';
 import { useEffect, useState } from 'react';
 import { play } from '../../effects/sound';
+import { useT } from '../../i18n';
 import { socket } from '../../lib/socket';
 
 const EMOJI: Record<ReactionKind, string> = { like: '👍', dislike: '👎' };
@@ -55,12 +56,14 @@ interface BarProps {
 
 /** Tahmin edenlerin tepki butonları (tur başına bir kez). */
 export function ReactionBar({ drawerName, guessed, turnKey }: BarProps) {
+  const t = useT();
   const [reactedTurn, setReactedTurn] = useState<string | null>(null);
 
   return (
     <div className="react-row">
       <span className="muted small">
-        {drawerName} çiziyor{guessed ? ' · sen bildin!' : ''}
+        {t('game.isDrawing', { name: drawerName ?? '' })}
+        {guessed ? t('game.youGuessed') : ''}
       </span>
       <span className="react-btns">
         {(['like', 'dislike'] as const).map((kind) => (
@@ -68,7 +71,7 @@ export function ReactionBar({ drawerName, guessed, turnKey }: BarProps) {
             type="button"
             key={kind}
             className="icon-btn"
-            aria-label={kind === 'like' ? 'Beğendim' : 'Beğenmedim'}
+            aria-label={kind === 'like' ? t('game.like') : t('game.dislike')}
             disabled={reactedTurn === turnKey}
             onClick={() => {
               socket.emit('react', kind);
