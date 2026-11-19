@@ -5,7 +5,7 @@ import InstallButton from '../components/common/InstallButton';
 import SoundToggle from '../components/common/SoundToggle';
 import { play } from '../effects/sound';
 import { setLang, useLang, useT } from '../i18n';
-import type { Profile } from '../lib/session';
+import { clearLocalData, type Profile } from '../lib/session';
 
 /** Ana ekranda gösterilebilecek hatalar: sunucunun kodları + istemcinin kendi durumları. */
 export type HomeError = ErrorCode | 'unreachable' | 'kickedByHost';
@@ -151,6 +151,27 @@ export default function Home({ profile, onProfile, initialCode, busy, error, onC
           <b>3.</b> {t('home.how3')}
         </div>
       </div>
+
+      <footer className="home-footer">
+        <span>{t('home.privacyNote')}</span>
+        <span className="home-footer-links">
+          <a href={lang === 'tr' ? '/gizlilik.html' : '/privacy.html'} target="_blank" rel="noopener">
+            {t('home.privacy')}
+          </a>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              if (!confirm(t('home.deleteConfirm'))) return;
+              clearLocalData();
+              window.location.reload();
+            }}
+          >
+            {t('home.deleteData')}
+          </button>
+        </span>
+      </footer>
     </div>
   );
 }

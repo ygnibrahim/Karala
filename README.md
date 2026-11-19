@@ -103,6 +103,14 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
   - **🚪 Odadan çıkar** (sadece oda sahibi): Çıkarılan aynı odaya geri giremez.
 - İsteğe bağlı: Render'da `REPORT_WEBHOOK_URL` ortam değişkenine bir Discord/Slack webhook adresi yazılırsa bildirimler oraya da gelir (telefona anlık bildirim).
 
+## Gizlilik ve KVKK
+
+- Gizlilik politikası ve KVKK aydınlatma metni: `/gizlilik` (TR) ve `/privacy` (EN), yani https://karala.onrender.com/gizlilik. Kaynak: `client/public/gizlilik.html`, `privacy.html`. Mağaza sayfalarına bu adresler yazılır.
+- Metinlerdeki **[sarı yer tutucular]** (veri sorumlusu adı, iletişim e-postası) mağazaya çıkmadan önce doldurulmalı.
+- Hesap, çerez, reklam ya da analiz aracı yok. Sohbet ve çizimler sadece bellekte, oda kapanınca silinir. Yazı tipi kendi sunucumuzdan gelir; üçüncü taraf kaynak kullanılmaz (CSP testi bunu denetler).
+- Ana ekrandaki "Bu cihazdaki bilgilerimi sil" bağlantısı, cihazda tutulan profili ve tercihleri siler.
+- Veri işleme değişirse (yeni veri, analiz aracı, reklam vb.) bu iki sayfa da güncellenmeli.
+
 ## Dil
 
 - Arayüz **Türkçe / İngilizce**; her oyuncu ana ekrandan kendi dilini seçer (varsayılan: cihazın dili). Metinler: `client/src/i18n/tr.ts`, `en.ts`.

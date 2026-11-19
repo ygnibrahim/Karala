@@ -31,8 +31,8 @@ export function createKaralaServer({ serveClient = true } = {}): KaralaServer {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
           // React'in style={...} öznitelikleri satır içi stil gerektirir.
-          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:'],
           connectSrc: ["'self'", 'ws:', 'wss:'],
           workerSrc: ["'self'"],
@@ -67,6 +67,8 @@ export function createKaralaServer({ serveClient = true } = {}): KaralaServer {
   if (serveClient && existsSync(CLIENT_DIST)) {
     app.use(
       express.static(CLIENT_DIST, {
+        // /gizlilik → gizlilik.html (mağaza sayfalarında kısa adres)
+        extensions: ['html'],
         setHeaders(res, path) {
           // İçerik özetli dosyalar hiç değişmez; sw.js ve index.html her zaman taze alınmalı.
           if (path.includes(`${sep}assets${sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');

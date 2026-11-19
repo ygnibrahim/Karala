@@ -96,3 +96,15 @@ export function inviteLink(code: string): string {
   const base = (import.meta.env.VITE_PUBLIC_URL as string | undefined) || window.location.origin + window.location.pathname;
   return `${base.replace(/\/$/, '')}/?oda=${code}`;
 }
+
+/** "Bu cihazdaki bilgilerimi sil": oyunun bu cihazda tuttuğu her şeyi (profil, tercihler, oturum) siler. */
+export function clearLocalData(): void {
+  for (const store of [local, tab]) {
+    try {
+      const s = store();
+      for (const key of Object.keys(s)) if (key.startsWith('karala')) s.removeItem(key);
+    } catch {
+      /* depolama kapalı: silinecek bir şey yok */
+    }
+  }
+}

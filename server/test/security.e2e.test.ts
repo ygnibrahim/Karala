@@ -326,5 +326,8 @@ describe('HTTP güvenlik başlıkları', () => {
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
+    // Üçüncü taraf kaynak yok (yazı tipi dahil): oyuncuların IP'si başka bir siteye gitmez.
+    expect(csp).not.toContain('http://');
+    expect(csp).not.toContain('https://');
   });
 });

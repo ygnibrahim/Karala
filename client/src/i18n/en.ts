@@ -46,6 +46,10 @@ export const en: Record<Key, string> = {
   'home.install': '📲 Install the app',
   'home.addToHome': '📲 Add to Home Screen',
   'home.iosHelp': 'In Safari, tap the Share ⬆️ button below, then choose Add to Home Screen.',
+  'home.privacy': 'Privacy',
+  'home.privacyNote': 'No accounts, no ads, no tracking.',
+  'home.deleteData': 'Delete my data on this device',
+  'home.deleteConfirm': 'Delete your nickname, avatar and preferences from this device?',
 
   // ---- Errors ----
   'error.banned': 'You were removed from this room.',

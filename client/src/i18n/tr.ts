@@ -45,6 +45,10 @@ export const tr = {
   'home.install': '📲 Uygulamayı yükle',
   'home.addToHome': '📲 Ana ekrana ekle',
   'home.iosHelp': "Safari'de alttaki Paylaş ⬆️ butonuna dokun, sonra Ana Ekrana Ekle'yi seç.",
+  'home.privacy': 'Gizlilik ve KVKK',
+  'home.privacyNote': 'Hesap yok, reklam yok, takip yok.',
+  'home.deleteData': 'Bu cihazdaki bilgilerimi sil',
+  'home.deleteConfirm': 'Takma adın, avatarın ve tercihlerin bu cihazdan silinsin mi?',
 
   // ---- Hatalar ----
   'error.banned': 'Bu odadan çıkarıldın.',
