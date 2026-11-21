@@ -125,6 +125,11 @@ export const TEAM_SCORING = {
   drawer: 1,
 } as const;
 
+/** 👍/👎 tepkileri: tur başına sınır yok; seri basışta odaya mesaj yağmasın diye kısa bekleme. */
+export const REACTIONS = {
+  cooldownMs: 600,
+} as const;
+
 export const MODERATION = {
   /** Odadaki diğer oyuncuların en az bu oranı aynı kişiyi bildirirse kişi odadan çıkarılır. */
   autoKickRatio: 0.5,

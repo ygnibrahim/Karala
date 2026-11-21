@@ -1,6 +1,6 @@
 // Tepkiler: tahmin edenlerin 👍/👎 butonları ve tuvalin üstünde uçuşan emojiler.
 import type { ReactionKind } from '@shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { play } from '../../effects/sound';
 import { useT } from '../../i18n';
 import { socket } from '../../lib/socket';
@@ -8,6 +8,8 @@ import { socket } from '../../lib/socket';
 const EMOJI: Record<ReactionKind, string> = { like: '👍', dislike: '👎' };
 /** Uçan emojinin ekranda kalma süresi (CSS animasyonuyla aynı). */
 const FLOAT_MS = 2200;
+/** İki tepki arası en kısa süre (sunucudaki REACTIONS.cooldownMs ile aynı). */
+const COOLDOWN_MS = 600;
 
 interface Floater {
   id: number;
@@ -50,14 +52,14 @@ export function ReactionLayer() {
 interface BarProps {
   drawerName: string | undefined;
   guessed: boolean;
-  /** Tur değişince butonlar yeniden açılsın diye turun kimliği. */
-  turnKey: string;
 }
 
-/** Tahmin edenlerin tepki butonları (tur başına bir kez). */
-export function ReactionBar({ drawerName, guessed, turnKey }: BarProps) {
+/** Tahmin edenlerin tepki butonları: sınırsız, basışlar arası kısa bekleme ile. */
+export function ReactionBar({ drawerName, guessed }: BarProps) {
   const t = useT();
-  const [reactedTurn, setReactedTurn] = useState<string | null>(null);
+  const [cooling, setCooling] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   return (
     <div className="react-row">
@@ -72,10 +74,11 @@ export function ReactionBar({ drawerName, guessed, turnKey }: BarProps) {
             key={kind}
             className="icon-btn"
             aria-label={kind === 'like' ? t('game.like') : t('game.dislike')}
-            disabled={reactedTurn === turnKey}
+            disabled={cooling}
             onClick={() => {
               socket.emit('react', kind);
-              setReactedTurn(turnKey);
+              setCooling(true);
+              timer.current = setTimeout(() => setCooling(false), COOLDOWN_MS);
             }}
           >
             {EMOJI[kind]}

@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { registerServiceWorker } from './lib/pwa';
+import { trackViewportHeight } from './lib/viewport';
 // Yazı tipi kendi sunucumuzdan gelir (Google Fonts'a istek yok: oyuncuların IP'si üçüncü tarafa gitmez).
 import '@fontsource/baloo-2/latin-500.css';
 import '@fontsource/baloo-2/latin-ext-500.css';
@@ -12,6 +13,7 @@ import '@fontsource/baloo-2/latin-ext-800.css';
 import './styles/index.css';
 
 registerServiceWorker();
+trackViewportHeight();
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root bulunamadı');

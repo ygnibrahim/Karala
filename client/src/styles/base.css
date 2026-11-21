@@ -267,7 +267,7 @@ canvas {
 .sheet {
   position: relative;
   width: min(340px, 100%);
-  max-height: calc(100dvh - 32px);
+  max-height: calc(var(--app-h, 100dvh) - 32px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;

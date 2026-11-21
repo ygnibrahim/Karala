@@ -58,9 +58,7 @@ export default function Game({ data }: { data: GameData }) {
           }
         />
         <ReactionLayer />
-        {drawing && !iAmDrawer && (
-          <ReactionBar drawerName={drawer?.name} guessed={!!me?.guessed} turnKey={`${room.round}-${room.drawerId}`} />
-        )}
+        {drawing && !iAmDrawer && <ReactionBar drawerName={drawer?.name} guessed={!!me?.guessed} />}
       </main>
 
       <section className="side-chat">

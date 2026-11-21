@@ -35,7 +35,7 @@
   border-radius: 14px;
   padding: 8px 12px;
   box-shadow: var(--shadow);
-  width: min(100%, calc((100dvh - 230px) * 4 / 3));
+  width: min(100%, calc((var(--app-h, 100dvh) - 230px) * 4 / 3));
   align-self: center;
 }
 .imp-panel.my-turn {

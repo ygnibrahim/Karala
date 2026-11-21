@@ -2,6 +2,7 @@
 // Süreler testlerde kısaltılmıştır (vitest.config.mts → CHOOSE_MS=1500, TURN_END_MS=300).
 import type { RoomState } from '@shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { REACTIONS } from '../src/config';
 import { WORDS_EN } from '../src/game/wordListEn';
 import {
   type Client,
@@ -14,6 +15,7 @@ import {
   payload,
   settle,
   setupRoom,
+  startDrawing,
   startServer,
   type TestServer,
   waitForState,
@@ -155,5 +157,28 @@ describe('oda dili', () => {
     expect(lastState(game.host).settings.language).toBe('tr');
     game.host.emit('room:settings', { language: 'en' });
     await waitForState(game.host, (s) => s.settings.language === 'en');
+  });
+});
+
+describe('klasik mod: tepkiler', () => {
+  it('👍/👎 tur başına sınırsız; ama seri basışta kısa bekleme var, çizen tepki veremez', async () => {
+    const game = await setupRoom(ts, 1);
+    const { drawer, guessers } = await startDrawing(game);
+    const reactions = () => eventsOf(game.host, 'reaction').length;
+    const before = reactions();
+    const g = guessers[0];
+    g.emit('react', 'like');
+    g.emit('react', 'like'); // bekleme süresi içinde: yok sayılır
+    await settle();
+    expect(reactions() - before).toBe(1);
+    await settle(REACTIONS.cooldownMs);
+    g.emit('react', 'dislike');
+    await settle();
+    expect(reactions() - before).toBe(2);
+    await settle(REACTIONS.cooldownMs);
+    g.emit('react', 'like');
+    drawer.emit('react', 'like');
+    await settle();
+    expect(reactions() - before).toBe(3);
   });
 });

@@ -26,7 +26,7 @@ import {
   type TurnResult,
 } from '@shared';
 import type { Server, Socket } from 'socket.io';
-import { MODERATION, TEAMS, TIMING } from '../config';
+import { MODERATION, REACTIONS, TEAMS, TIMING } from '../config';
 import { defaultReportSink, type ReportSink } from '../moderation/reports';
 import { pickRandom, randomId, randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
@@ -52,7 +52,8 @@ export interface Player {
   avatar: Avatar;
   score: number;
   guessed: boolean;
-  reacted: boolean;
+  /** Son tepki zamanı (ms): tepkiler sınırsız ama aralarında kısa bekleme var. */
+  lastReactAt: number;
   leaveTimer: NodeJS.Timeout | null;
   /** Son sohbet mesajları: bildirim gelirse bağlam olarak eklenir. */
   recent: string[];
@@ -148,7 +149,7 @@ export class Room {
         avatar,
         score: 0,
         guessed: false,
-        reacted: false,
+        lastReactAt: 0,
         leaveTimer: null,
         recent: [],
       };
@@ -408,7 +409,6 @@ export class Room {
     this.turnResult = null;
     for (const p of this.players) {
       p.guessed = false;
-      p.reacted = false;
     }
     this.setPhaseTimer(TIMING.chooseMs);
     this.io.to(this.code).emit('draw:history', []);
@@ -569,8 +569,10 @@ export class Room {
 
   react(playerId: string, kind: ReactionKind): void {
     const p = this.findPlayer(playerId);
-    if (!p || this.phase !== 'drawing' || p.id === this.drawerId || p.reacted) return;
-    p.reacted = true;
+    if (!p || this.phase !== 'drawing' || p.id === this.drawerId) return;
+    const now = Date.now();
+    if (now - p.lastReactAt < REACTIONS.cooldownMs) return;
+    p.lastReactAt = now;
     this.io.to(this.code).emit('reaction', { kind, name: p.name });
   }
 

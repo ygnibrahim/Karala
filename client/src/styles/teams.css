@@ -278,8 +278,8 @@
     padding: 2px;
   }
   .team-drawing .drawing-view {
-    /* Tuvalin yüksekliği (100dvh - 185px) eksi başlık, kelime ve alt yazı. */
-    max-height: calc(100dvh - 300px);
+    /* Tuvalin yüksekliği (var(--app-h, 100dvh) - 185px) eksi başlık, kelime ve alt yazı. */
+    max-height: calc(var(--app-h, 100dvh) - 300px);
     width: auto;
     max-width: 100%;
     margin: 0 auto;

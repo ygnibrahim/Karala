@@ -90,10 +90,14 @@
   .board {
     gap: 6px;
   }
-  .board-canvas-wrap,
   .toolbar,
   .react-row {
     width: 100%;
+  }
+  /* Klavye açılınca (--app-h küçülür) tuval de küçülsün; sohbet ve yazı kutusu görünür kalsın. */
+  .board-canvas-wrap {
+    width: min(100%, max(150px, calc((var(--app-h, 100dvh) - 300px) * 4 / 3)));
+    align-self: center;
   }
   .board-canvas-wrap {
     border-radius: 14px;
@@ -205,11 +209,11 @@
   }
   /* Tuval ekran yüksekliğine sığsın; araç çubuğu tuvale değil sütuna yayılsın (daha az satır). */
   .board-canvas-wrap {
-    width: min(100%, calc((100dvh - 185px) * 4 / 3));
+    width: min(100%, calc((var(--app-h, 100dvh) - 185px) * 4 / 3));
   }
   /* Sahtekâr modunda çizen: araç çubuğunun altında bir de tur paneli var. */
   .main-board:has(.toolbar):has(.imp-panel) .board-canvas-wrap {
-    width: min(100%, calc((100dvh - 240px) * 4 / 3));
+    width: min(100%, calc((var(--app-h, 100dvh) - 240px) * 4 / 3));
   }
   .toolbar,
   .react-row,
