@@ -4,6 +4,7 @@ import type { ErrorCode } from './messages';
 import type {
   Avatar,
   ChatMessage,
+  GalleryItem,
   ImpostorRole,
   Lang,
   ReactionKind,
@@ -42,6 +43,8 @@ export interface ClientToServer {
   'draw:op': (op: DrawOp) => void;
   /** Çizim tahtası ekrana gelince mevcut çizimi ister (sayfa yenilendiyse kaçırılmış olabilir). */
   'draw:sync': () => void;
+  /** Oyun sonu galerisini iste (sadece gameEnd'de yanıtlanır). */
+  'gallery:get': () => void;
   'chat:send': (text: string) => void;
   react: (kind: ReactionKind) => void;
   /** Kırık Telefon: yazma/tahmin adımında metni, çizim adımında "bitti"yi gönderir. */
@@ -74,6 +77,7 @@ export interface ServerToClient {
   'word:secret': (word: string) => void;
   'draw:op': (op: DrawOp) => void;
   'draw:history': (items: DrawItem[]) => void;
+  'game:gallery': (items: GalleryItem[]) => void;
   'chat:message': (m: ChatMessage) => void;
   reaction: (r: { kind: ReactionKind; name: string }) => void;
   /** Kırık Telefon: bu oyuncunun bu adımdaki görevi. */

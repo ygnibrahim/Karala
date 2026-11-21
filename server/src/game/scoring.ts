@@ -1,14 +1,12 @@
 import { SCORING } from '../config';
 
 /**
- * Doğru tahmin puanı: kalan süreye oranla guessMin..guessMax, ilk bilen ek puan alır.
- * @param timeLeftMs aşamanın bitmesine kalan süre
- * @param totalMs aşamanın toplam süresi
+ * Doğru tahmin puanı bilme sırasına göre: ilk bilen 15, sonraki 13, 11… (en az 5).
+ * @param order kendisinden önce bilen oyuncu sayısı (ilk bilen için 0)
  */
-export function guessPoints(timeLeftMs: number, totalMs: number, isFirst: boolean): number {
-  const ratio = totalMs > 0 ? Math.min(1, Math.max(0, timeLeftMs / totalMs)) : 0;
-  const base = SCORING.guessMin + (SCORING.guessMax - SCORING.guessMin) * ratio;
-  return Math.round(base) + (isFirst ? SCORING.firstGuessBonus : 0);
+export function guessPoints(order: number): number {
+  const n = Number.isFinite(order) ? Math.max(0, Math.floor(order)) : 0;
+  return Math.max(SCORING.guessMin, SCORING.firstGuess - SCORING.guessStep * n);
 }
 
 export const DRAWER_POINTS_PER_GUESS = SCORING.drawerPerGuess;

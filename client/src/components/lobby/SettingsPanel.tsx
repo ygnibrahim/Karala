@@ -14,6 +14,7 @@ import {
 } from '@shared';
 import { useEffect, useRef, useState } from 'react';
 import { type Key, useT } from '../../i18n';
+import { saveCustomWords } from '../../lib/customWords';
 import { socket } from '../../lib/socket';
 
 interface Props {
@@ -122,7 +123,11 @@ export default function SettingsPanel({ settings: s, isHost, customWords, connec
               placeholder={t('settings.customWordsPlaceholder')}
               value={wordsText}
               onChange={(e) => setWordsText(e.target.value)}
-              onBlur={() => update({ customWords: wordsText.split(/[,\n]/) })}
+              onBlur={() => {
+                const words = wordsText.split(/[,\n]/);
+                saveCustomWords(words);
+                update({ customWords: words });
+              }}
             />
           </label>
         ) : (

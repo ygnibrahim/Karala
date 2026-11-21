@@ -60,12 +60,12 @@ export const RATE_LIMITS = {
 } as const;
 
 export const SCORING = {
-  /** Tahmin eden: kalan süreye göre min..max arası puan. */
+  /** Tahmin eden: bilme sırasına göre. İlk bilen 15, sonraki 13, 11… en az 5. */
+  firstGuess: 15,
+  guessStep: 2,
   guessMin: 5,
-  guessMax: 50,
-  firstGuessBonus: 10,
   /** Çizen: kelimeyi bilen her oyuncu için. */
-  drawerPerGuess: 10,
+  drawerPerGuess: 3,
 } as const;
 
 export const TELEPHONE = {
@@ -123,6 +123,13 @@ export const TEAM_SCORING = {
   guesser: 2,
   /** Kişisel puan: turu kazanan takımın çizeni. */
   drawer: 1,
+} as const;
+
+/** Oyun sonu galerisi: bellekte ve ağda şişmesin diye sınırlı. */
+export const GALLERY = {
+  maxItems: 30,
+  /** Galerideki tüm çizimlerin toplam nokta sayısı sınırı (aşan çizim eklenmez). */
+  maxPoints: 150_000,
 } as const;
 
 /** 👍/👎 tepkileri: tur başına sınır yok; seri basışta odaya mesaj yağmasın diye kısa bekleme. */

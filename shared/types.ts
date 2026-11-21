@@ -174,6 +174,16 @@ export type TeamId = 'red' | 'blue';
 /** intro: çizenler kelimeyi görür · draw: iki takım aynı anda çizer · result: iki çizim de gösterilir */
 export type TeamRaceStage = 'intro' | 'draw' | 'result';
 
+/** Oyun sonu galerisi: oyunda çizilen her resim (Klasik, Sahtekâr, Çizim Yarışı). */
+export interface GalleryItem {
+  word: string;
+  /** Çizenin o anki adı (oyundan ayrılmış olabilir). Sahtekâr'da ortak çizim olduğu için null. */
+  drawerName: string | null;
+  /** Çizim Yarışı'nda hangi takımın çizimi. */
+  team: TeamId | null;
+  drawing: DrawItem[];
+}
+
 export interface TeamRaceResult {
   word: string;
   /** Kelimeyi ilk bilen takım (süre dolduysa null). */

@@ -8,9 +8,11 @@ import {
   type ClientToServer,
   CUSTOM_ONLY_CATEGORY,
   DEFAULT_SETTINGS,
+  type DrawItem,
   type DrawOp,
   type ErrorCode,
   GAME_MODES,
+  type GalleryItem,
   type Lang,
   type MessageKey,
   type MessageVars,
@@ -26,7 +28,7 @@ import {
   type TurnResult,
 } from '@shared';
 import type { Server, Socket } from 'socket.io';
-import { MODERATION, REACTIONS, TEAMS, TIMING } from '../config';
+import { GALLERY, MODERATION, REACTIONS, TEAMS, TIMING } from '../config';
 import { defaultReportSink, type ReportSink } from '../moderation/reports';
 import { pickRandom, randomId, randomItem } from '../utils/random';
 import { isClose, normalizeGuess } from '../utils/text';
@@ -95,6 +97,9 @@ export class Room {
   private usedWords = new Set<string>();
   private turnGains: Record<string, number> = {};
   private turnResult: TurnResult | null = null;
+  /** Bu oyunda çizilen resimler: oyun sonunda istenince gönderilir, yeni oyunda sıfırlanır. */
+  private gallery: GalleryItem[] = [];
+  private galleryPoints = 0;
   private msgId = 0;
   /** Oda sahibinin çıkardığı oyuncuların oturum anahtarları: aynı odaya geri giremezler. */
   private banned = new Set<string>();
@@ -334,6 +339,7 @@ export class Room {
       return;
     }
     for (const p of this.players) p.score = 0;
+    this.clearGallery();
     if (this.settings.mode === 'telephone') {
       this.startTelephone();
       return;
@@ -379,6 +385,7 @@ export class Room {
     this.drawerId = null;
     this.word = null;
     this.turnResult = null;
+    this.clearGallery();
     this.canvas.reset();
     for (const p of this.players) {
       p.score = 0;
@@ -450,6 +457,7 @@ export class Room {
     const word = this.word ?? '';
     this.phase = 'turnEnd';
     this.turnResult = { word, drawerId: this.drawerId, gains: { ...this.turnGains }, reason };
+    if (word) this.archive(word, this.drawerId, null, this.canvas.items);
     this.setPhaseTimer(TIMING.turnEndMs);
     if (word) this.system('wordWas', { word });
     this.broadcastState();
@@ -464,6 +472,30 @@ export class Room {
     const winner = [...this.players].sort((a, b) => b.score - a.score)[0];
     if (winner) this.system('winner', { name: winner.name });
     this.broadcastState();
+  }
+
+  // ---------- Galeri ----------
+
+  /** Biten turun çizimini galeriye ekler (boşsa ya da sınır dolduysa eklemez). */
+  private archive(word: string, drawerId: string | null, team: TeamId | null, drawing: DrawItem[]): void {
+    if (drawing.length === 0 || this.gallery.length >= GALLERY.maxItems) return;
+    const points = drawing.reduce((n, it) => n + (it.k === 'stroke' ? it.pts.length / 2 : 1), 0);
+    if (this.galleryPoints + points > GALLERY.maxPoints) return;
+    this.galleryPoints += points;
+    const drawerName = drawerId ? (this.findPlayer(drawerId)?.name ?? null) : null;
+    // Kopya: tuval yeni turda sıfırlansa da galerideki çizim değişmesin.
+    const copy = drawing.map((it) => (it.k === 'stroke' ? { ...it, pts: [...it.pts] } : { ...it }));
+    this.gallery.push({ word, drawerName, team, drawing: copy });
+  }
+
+  private clearGallery(): void {
+    this.gallery = [];
+    this.galleryPoints = 0;
+  }
+
+  /** Oyun sonu galerisini isteyen oyuncuya gönderir (sadece oyun bittiğinde). */
+  sendGallery(socket: Socket<ClientToServer, ServerToClient>): void {
+    if (this.phase === 'gameEnd') socket.emit('game:gallery', this.gallery);
   }
 
   // ---------- Zamanlayıcı ----------
@@ -540,8 +572,7 @@ export class Room {
   }
 
   private correctGuess(p: Player): void {
-    const isFirst = !this.players.some((x) => x.guessed);
-    const points = guessPoints(this.deadline - Date.now(), this.deadline - this.phaseStart, isFirst);
+    const points = guessPoints(this.players.filter((x) => x.guessed).length);
     p.guessed = true;
     this.addPoints(p, points);
 
@@ -742,6 +773,7 @@ export class Room {
         },
         system: (key, vars) => this.system(key, vars),
         finished: () => this.endImpostor(),
+        archive: (word) => this.archive(word, null, null, this.canvas.items),
       },
     );
     this.system('impostorStarted');
@@ -842,6 +874,7 @@ export class Room {
       },
       system: (key, vars) => this.system(key, vars),
       finished: (score) => this.endTeams(score),
+      archive: (word, team, drawerId, drawing) => this.archive(word, drawerId, team, drawing),
     });
     this.system('teamsStarted');
     this.teamRace.start();

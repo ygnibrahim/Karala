@@ -6,20 +6,15 @@ import { pickWords, wordPool } from '../src/game/wordPicker';
 import { RateLimiter } from '../src/socket/RateLimiter';
 
 describe('guessPoints', () => {
-  it('erken bilen daha çok puan alır, puan sınırlar içinde kalır', () => {
-    expect(guessPoints(80_000, 80_000, false)).toBe(SCORING.guessMax);
-    expect(guessPoints(0, 80_000, false)).toBe(SCORING.guessMin);
-    expect(guessPoints(40_000, 80_000, false)).toBe(Math.round((SCORING.guessMin + SCORING.guessMax) / 2));
+  it('bilme sırasına göre: 15, 13, 11, 9, 7, sonra hep 5', () => {
+    expect([0, 1, 2, 3, 4, 5, 9].map(guessPoints)).toEqual([15, 13, 11, 9, 7, 5, 5]);
+    expect(guessPoints(0)).toBe(SCORING.firstGuess);
   });
 
-  it('ilk bilen bonus alır', () => {
-    expect(guessPoints(0, 80_000, true)).toBe(SCORING.guessMin + SCORING.firstGuessBonus);
-  });
-
-  it('bozuk süre değerlerinde sınır dışına çıkmaz', () => {
-    expect(guessPoints(-5, 80_000, false)).toBe(SCORING.guessMin);
-    expect(guessPoints(1e9, 80_000, false)).toBe(SCORING.guessMax);
-    expect(guessPoints(10, 0, false)).toBe(SCORING.guessMin);
+  it('bozuk değerlerde sınır dışına çıkmaz', () => {
+    expect(guessPoints(-3)).toBe(SCORING.firstGuess);
+    expect(guessPoints(Number.NaN)).toBe(SCORING.firstGuess);
+    expect(guessPoints(1e9)).toBe(SCORING.guessMin);
   });
 });
 

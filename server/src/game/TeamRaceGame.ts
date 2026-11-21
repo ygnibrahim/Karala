@@ -44,6 +44,8 @@ export interface TeamRaceHooks {
   award(playerId: string, points: number): void;
   system(key: MessageKey, vars?: MessageVars): void;
   finished(score: Record<TeamId, number>): void;
+  /** Tur bitti: iki takımın çizimini galeriye ekle. */
+  archive?(word: string, team: TeamId, drawerId: string | null, drawing: DrawItem[]): void;
 }
 
 export const otherTeam = (team: TeamId): TeamId => (team === 'red' ? 'blue' : 'red');
@@ -144,6 +146,7 @@ export class TeamRaceGame {
       guesserId,
       drawings: { red: [...this.canvases.red.items], blue: [...this.canvases.blue.items] },
     };
+    for (const team of TEAM_IDS) this.hooks.archive?.(this.word, team, this.drawers[team], this.result.drawings[team]);
     this.setStage('result', TEAMS.resultMs, () => this.nextTurn());
   }
 

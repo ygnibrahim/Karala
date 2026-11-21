@@ -1,4 +1,5 @@
 import AvatarBadge from '../components/common/AvatarBadge';
+import Gallery from '../components/game/Gallery';
 import { useT } from '../i18n';
 import { socket } from '../lib/socket';
 import type { GameData } from '../types';
@@ -84,6 +85,8 @@ export default function GameEnd({ data }: { data: GameData }) {
           {t('end.home')}
         </button>
       </div>
+
+      {!telephone && <Gallery />}
     </div>
   );
 }

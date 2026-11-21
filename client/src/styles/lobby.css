@@ -105,3 +105,21 @@
     opacity: 0.45;
   }
 }
+
+/* Üst bardaki düğmeler (QR, Davet et) dar ekranda alt satıra kaymasın. */
+.lobby-head .btn {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .lobby-head {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .head-actions .btn-small {
+    padding-inline: 9px;
+  }
+  .lobby-head .room-code strong {
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+  }
+}

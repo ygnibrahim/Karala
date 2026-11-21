@@ -85,11 +85,17 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
 - **🕵️ Sahtekâr** (en az 3 kişi): Biri kelimeyi bilmez, sadece kategoriyi bilir. Herkes ortak tuvale sırayla tek çizgi çizer (2 dönüş), sonra sahtekâr oylanır. Yakalanan sahtekâr kelimeyi bilirse kurtulur. Puan: kaçarsa sahtekâra +3, yakalanıp bilirse +2; yakalanıp bilemezse diğerlerine +1, doğru oy verenlere +1 daha.
 - **🏁 Çizim Yarışı** (en az 4 kişi, takımda en az 2): Lobide 🔴/🔵 takım seçilir (oda sahibi karıştırabilir). Her turda iki takımın çizeni aynı kelimeyi aynı anda kendi takımına çizer; herkes sadece kendi takımının tuvalini ve sohbetini görür. İlk bilen takım turu alır, tur sonunda iki çizim yan yana gösterilir. Kişisel puan: bilen +2, kazanan takımın çizeni +1.
 
+## Arkadaşlarla oynarken
+
+- **📷 QR ile katılma:** Lobide "QR"ye bas; yanındakiler telefon kamerasıyla okutup doğrudan odaya girer.
+- **Özel kelimeler:** Oda sahibi ayarlardan kendi kelimelerini yazar (isimler, iç espriler). "Sadece özel kelimeler" kategorisiyle yalnız bunlar çıkar. Liste oda sahibinin cihazında hatırlanır, sonraki odaya otomatik gelir.
+- **🖼️ Oyun sonu galerisi:** Klasik, Sahtekâr ve Çizim Yarışı'nda oyun bitince o oyunun bütün çizimleri gösterilir. Bir çizime dokunup "Kaydet / Paylaş" ile altında kelime ve çizenin adı yazan resim olarak WhatsApp vb.'ye gönderilir. Galeri sadece bellekte durur (en fazla 30 çizim), yeni oyunda silinir.
+
 ## Klasik mod kuralları (özet)
 
 - Her turda sırayla herkes bir kez çizer; çizen 3 kelimeden birini seçer (15 sn).
-- Tahmin eden: kalan süreye göre 5–50 puan, ilk bilen +10.
-- Çizen: kelimeyi bilen her oyuncu için +10.
+- Tahmin eden: bilme sırasına göre puan: ilk bilen 15, ikinci 13, üçüncü 11… (en az 5).
+- Çizen: kelimeyi bilen her oyuncu için +3.
 - Süre ilerledikçe harf ipuçları açılır; bir harf farkla yazılan tahminlerde "çok yakın!" uyarısı çıkar.
 - Türkçe karakter şart değil: "ordek" = "ördek".
 - Herkes bilirse tur erken biter. Sayfayı yenileyen ya da bağlantısı kopan oyuncu 2 dk içinde kaldığı yerden devam eder.
@@ -124,7 +130,7 @@ Kontrollerden biri kırmızıysa ya da onay verilmezse canlı site eski sürümd
 - [x] Sesler ve animasyonlar
 - [x] İnternette yayın (Render) + PWA (ana ekrana yüklenebilir)
 - [x] Klasör yapısı, kod kuralları, güvenlik sertleştirmesi ve testler, CI
-- [ ] QR ile katılma
+- [x] QR ile katılma, oyun sonu galerisi
 - [x] Kırık Telefon modu
 - [x] Sahtekâr modu
 - [x] Küfür filtresi ve oyuncu çıkarma

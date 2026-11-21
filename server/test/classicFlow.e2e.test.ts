@@ -1,6 +1,6 @@
 // Klasik mod: baştan sona tam oyun, zaman aşımları ve oda yaşam döngüsü.
 // Süreler testlerde kısaltılmıştır (vitest.config.mts → CHOOSE_MS=1500, TURN_END_MS=300).
-import type { RoomState } from '@shared';
+import type { GalleryItem, RoomState } from '@shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { REACTIONS } from '../src/config';
 import { WORDS_EN } from '../src/game/wordListEn';
@@ -181,4 +181,59 @@ describe('klasik mod: tepkiler', () => {
     await settle();
     expect(reactions() - before).toBe(3);
   });
+});
+
+describe('klasik mod: oyun sonu galerisi', () => {
+  it('her turun çizimi galeriye girer; boş tur girmez; sadece oyun bitince gönderilir; yeni oyunda sıfırlanır', async () => {
+    const game = await setupRoom(ts, 1);
+    game.host.emit('room:settings', { rounds: 2 });
+    await waitForState(game.host, (s) => s.settings.rounds === 2);
+    let from = game.host.log.length;
+    game.host.emit('game:start');
+
+    const words: string[] = [];
+    for (let turn = 0; turn < 4; turn++) {
+      const choosing = await nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'choosing', from);
+      const drawer = everyone(game).find((p) => p.id === choosing.drawerId);
+      if (!drawer) throw new Error('çizen yok');
+      const before = drawer.socket.log.length;
+      drawer.socket.emit('word:choose', 0);
+      const word = await nextEvent<string>(drawer.socket, 'word:secret', () => true, before);
+      // Son tur boş bırakılır: galeriye girmemeli.
+      if (turn < 3) {
+        drawer.socket.emit('draw:op', { t: 'start', color: '#000000', size: 6, x: 10, y: 10 });
+        drawer.socket.emit('draw:op', { t: 'move', pts: [20, 20, 30, 30] });
+        words.push(word);
+      }
+      await settle(50);
+      from = game.host.log.length;
+      const ended = nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'turnEnd' || s.phase === 'gameEnd', from);
+      for (const p of everyone(game)) if (p !== drawer) p.socket.emit('chat:send', word);
+      await ended;
+      // Oyun sürerken galeri istenirse yanıt gelmez.
+      if (turn === 0) {
+        game.host.emit('gallery:get');
+        await settle();
+        expect(eventsOf(game.host, 'game:gallery')).toHaveLength(0);
+      }
+      from = game.host.log.length;
+    }
+
+    await nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'gameEnd', from);
+    const got = nextEvent<GalleryItem[]>(game.others[0].socket, 'game:gallery', () => true);
+    game.others[0].socket.emit('gallery:get');
+    const gallery = await got;
+    expect(gallery.map((g) => g.word)).toEqual(words);
+    expect(gallery.every((g) => g.drawerName && g.team === null && g.drawing.length === 1)).toBe(true);
+    expect(gallery[0].drawing[0]).toMatchObject({ k: 'stroke', pts: [10, 10, 20, 20, 30, 30] });
+
+    // Yeni oyun başlayınca galeri sıfırlanır.
+    game.host.emit('game:restart');
+    await waitForState(game.host, (s) => s.phase === 'lobby');
+    game.host.emit('game:start');
+    await waitForState(game.host, (s) => s.phase === 'choosing');
+    game.host.emit('gallery:get');
+    await settle();
+    expect(eventsOf(game.host, 'game:gallery')).toHaveLength(0);
+  }, 30_000);
 });

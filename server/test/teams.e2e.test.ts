@@ -1,7 +1,7 @@
 // Çizim Yarışı (takım modu): takım seçimi, çizimin ve sohbetin sadece kendi takımına gitmesi,
 // ilk bilen takımın turu alması, kopma/ayrılma durumları ve oyun sonu.
 // Süreler testlerde kısaltılmıştır (vitest.config.mts → TEAM_INTRO_MS, TEAM_RESULT_MS).
-import type { ChatMessage, DrawOp, RoomState, TeamId } from '@shared';
+import type { ChatMessage, DrawOp, GalleryItem, RoomState, TeamId } from '@shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TEAM_SCORING } from '../src/config';
 import {
@@ -263,6 +263,10 @@ describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
       const drawer = all.find((m) => m.id === redDrawer) as Member;
       const guesser = all.find((m) => start.teamOf(m.id) === 'red' && m.id !== redDrawer) as Member;
       const word = (await nextEvent<string>(drawer.socket, 'word:secret', () => true, drawer.socket.log.length - 5)) as string;
+      if (turn === 1) {
+        for (const op of stroke) drawer.socket.emit('draw:op', op);
+        await nextEvent(guesser.socket, 'draw:op', (op: DrawOp) => op.t === 'move');
+      }
       from = game.host.log.length;
       guesser.socket.emit('chat:send', word);
       await nextEvent<RoomState>(game.host, 'room:state', (s) => s.teams?.race?.stage === 'result', from);
@@ -274,6 +278,14 @@ describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
         (m) => (m as ChatMessage).key === 'teamWon' && (m as ChatMessage).vars?.team === 'red',
       ),
     ).toBe(true);
+
+    // Galeride sadece çizilen (ilk turdaki kırmızı) resim var; takımı ve çizeni yazılı.
+    const got = nextEvent<GalleryItem[]>(game.host, 'game:gallery', () => true);
+    game.host.emit('gallery:get');
+    const gallery = await got;
+    expect(gallery).toHaveLength(1);
+    expect(gallery[0].team).toBe('red');
+    expect(gallery[0].drawerName).toBeTruthy();
 
     const membersBefore = end.teams?.members;
     game.host.emit('game:restart');

@@ -23,6 +23,8 @@ export interface ImpostorHooks {
   award(gains: Record<string, number>): void;
   system(key: MessageKey, vars?: MessageVars): void;
   finished(): void;
+  /** Tur bitti: ortak çizimi galeriye ekle. */
+  archive?(word: string): void;
 }
 
 /** Oylamanın sonucu: en çok oyu tek başına sahtekâr aldıysa yakalanır (beraberlikte kaçar). */
@@ -164,6 +166,7 @@ export class ImpostorGame {
     const gains = impostorGains(this.participants, this.impostorId, votes, caught, guessedRight);
     this.hooks.award(gains);
     this.result = { impostorId: this.impostorId, word: this.word, votes, caught, guess, guessedRight, gains };
+    this.hooks.archive?.(this.word);
     const name = this.hooks.find(this.impostorId)?.name ?? '?';
     this.hooks.system(!caught ? 'impostorEscaped' : guessedRight ? 'impostorCaughtButKnew' : 'impostorCaught', {
       name,

@@ -1,12 +1,15 @@
 // Lobi: oyuncular toplanır, oda sahibi ayarları yapıp oyunu başlatır.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SoundToggle from '../components/common/SoundToggle';
 import Chat from '../components/game/Chat';
 import LobbyPlayers from '../components/lobby/LobbyPlayers';
+import QrInvite from '../components/lobby/QrInvite';
 import SettingsPanel from '../components/lobby/SettingsPanel';
 import TeamPicker, { teamsReady } from '../components/lobby/TeamPicker';
 import { useT } from '../i18n';
+import { loadCustomWords } from '../lib/customWords';
 import { inviteLink } from '../lib/session';
+import { socket } from '../lib/socket';
 import type { GameData } from '../types';
 
 export default function Lobby({ data }: { data: GameData }) {
@@ -16,6 +19,15 @@ export default function Lobby({ data }: { data: GameData }) {
   const connectedCount = room.players.filter((p) => p.connected).length;
   const teamMode = room.settings.mode === 'teams';
   const [copied, setCopied] = useState(false);
+
+  // Oda sahibinin bu cihazda kayıtlı özel kelimeleri varsa yeni odaya bir kez otomatik eklenir.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!isHost || restored.current) return;
+    restored.current = true;
+    const saved = loadCustomWords();
+    if (saved.length && room.settings.customWordCount === 0) socket.emit('room:settings', { customWords: saved });
+  }, [isHost, room.settings.customWordCount]);
 
   const shareInvite = async () => {
     const link = inviteLink(room.code);
@@ -44,6 +56,7 @@ export default function Lobby({ data }: { data: GameData }) {
         </div>
         <div className="head-actions">
           <SoundToggle />
+          <QrInvite code={room.code} />
           <button type="button" className="btn btn-secondary btn-small" onClick={shareInvite}>
             {copied ? t('lobby.copied') : t('lobby.invite')}
           </button>
