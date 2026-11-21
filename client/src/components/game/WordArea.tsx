@@ -1,6 +1,7 @@
 // Üst bardaki kelime alanı: aşamaya göre ipucu, gizli kelime ya da açıklanan kelime.
 import type { RoomState } from '@shared';
 import { useT } from '../../i18n';
+import Hint from './Hint';
 
 interface Props {
   room: RoomState;
@@ -22,16 +23,5 @@ export default function WordArea({ room, secret, iAmDrawer }: Props) {
   }
 
   if (!room.hint) return null;
-  const letterCount = room.hint.filter((c) => c !== ' ').length;
-  return (
-    <span className="hint">
-      {room.hint.map((c, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: harfin konumu kimliğidir; açılan harf animasyonu buna dayanır
-        <span key={i} className={c === ' ' ? 'gap' : c === '_' ? 'blank' : 'letter'}>
-          {c === '_' ? '' : c}
-        </span>
-      ))}
-      <sup>{letterCount}</sup>
-    </span>
-  );
+  return <Hint hint={room.hint} />;
 }

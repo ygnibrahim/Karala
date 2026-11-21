@@ -8,6 +8,7 @@ import AvatarBadge from '../components/common/AvatarBadge';
 import DrawingView from '../components/common/DrawingView';
 import PlayerActions from '../components/common/PlayerActions';
 import Chat from '../components/game/Chat';
+import Hint from '../components/game/Hint';
 import TopBar from '../components/game/TopBar';
 import { play } from '../effects/sound';
 import { useCountdown } from '../hooks/useCountdown';
@@ -115,17 +116,7 @@ function TeamWord({ room, race, word }: { room: RoomState; race: TeamRacePublic;
   if (word) return <span className="word-secret">{t('game.drawThis', { word })}</span>;
   if (race.stage === 'intro') return <span className="muted">{t('race.ready')}</span>;
   if (!room.hint) return null;
-  return (
-    <span className="hint">
-      {room.hint.map((c, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: harfin konumu kimliğidir
-        <span key={i} className={c === ' ' ? 'gap' : c === '_' ? 'blank' : 'letter'}>
-          {c === '_' ? '' : c}
-        </span>
-      ))}
-      <sup>{room.hint.filter((c) => c !== ' ').length}</sup>
-    </span>
-  );
+  return <Hint hint={room.hint} />;
 }
 
 function Intro({

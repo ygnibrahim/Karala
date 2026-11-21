@@ -36,7 +36,7 @@ export default function Gallery() {
   if (items.length === 0) return null;
 
   const byLine = (it: GalleryItem) =>
-    it.team ? t('gallery.byTeam', { team: t(`team.${it.team}`) }) : it.drawerName ? it.drawerName : t('gallery.together');
+    it.team ? t('gallery.byTeam', { team: t(`team.${it.team}`) }) : it.together ? t('gallery.together') : (it.drawerName ?? '?');
   const current = open === null ? null : items[open];
 
   const save = async (it: GalleryItem) => {

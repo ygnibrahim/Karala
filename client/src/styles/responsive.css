@@ -99,6 +99,21 @@
     width: min(100%, max(150px, calc((var(--app-h, 100dvh) - 300px) * 4 / 3)));
     align-self: center;
   }
+  .hint {
+    /* Çizgiler en uzun kelimeye göre küçülür; 9 harflik kelime sayısıyla tek satıra sığar. */
+    --slot: clamp(9px, calc((100vw - 250px) / var(--n, 10) - 4px), 0.85em);
+    --slot-gap: 4px;
+  }
+
+  /* Tam ekran oyun düzeni görünen alana sabitlenir: klavye açılınca sayfa kaymaz, sürüklenmez. */
+  .game,
+  .tp {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--app-top, 0px);
+  }
+
   .board-canvas-wrap {
     border-radius: 14px;
   }
@@ -259,5 +274,25 @@
 @media (max-height: 500px) and (min-width: 821px) {
   .players .rank {
     display: none;
+  }
+}
+
+/* ---------- Klavye açıkken (sohbete yazarken, telefonda) ---------- */
+@media (max-width: 820px) {
+  /* Oyuncu şeridi, tepki ve takım paneli gizlenir; boşalan yer tuvale gider. */
+  .kb .game .side-players,
+  .kb .game .react-row,
+  .kb .game .team-panel {
+    display: none;
+  }
+  .kb .game {
+    grid-template-rows: auto 0 auto minmax(84px, 1fr);
+    gap: 4px;
+  }
+  .kb .game .topbar {
+    padding: 4px 8px 8px;
+  }
+  .kb .game .board-canvas-wrap {
+    width: min(100%, max(150px, calc((var(--app-h, 100dvh) - 190px) * 4 / 3)));
   }
 }

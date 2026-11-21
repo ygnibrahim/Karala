@@ -177,8 +177,10 @@ export type TeamRaceStage = 'intro' | 'draw' | 'result';
 /** Oyun sonu galerisi: oyunda çizilen her resim (Klasik, Sahtekâr, Çizim Yarışı). */
 export interface GalleryItem {
   word: string;
-  /** Çizenin o anki adı (oyundan ayrılmış olabilir). Sahtekâr'da ortak çizim olduğu için null. */
+  /** Çizenin adı (tur başındaki hâli; oyuncu sonradan ayrılmış olabilir). Bilinmiyorsa null. */
   drawerName: string | null;
+  /** Sahtekâr: herkesin sırayla çizdiği ortak resim. */
+  together: boolean;
   /** Çizim Yarışı'nda hangi takımın çizimi. */
   team: TeamId | null;
   drawing: DrawItem[];

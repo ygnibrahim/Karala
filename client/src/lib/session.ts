@@ -93,7 +93,12 @@ export function setUrlRoom(code: string | null) {
 }
 
 export function inviteLink(code: string): string {
-  const base = (import.meta.env.VITE_PUBLIC_URL as string | undefined) || window.location.origin + window.location.pathname;
+  // Paketli uygulamada (Capacitor) sayfa adresi telefonun içidir (https://localhost): davet/QR linki
+  // o zaman oyunu da sunan sunucunun adresini kullanır.
+  const base =
+    (import.meta.env.VITE_PUBLIC_URL as string | undefined) ||
+    (import.meta.env.VITE_SERVER_URL as string | undefined) ||
+    window.location.origin + window.location.pathname;
   return `${base.replace(/\/$/, '')}/?oda=${code}`;
 }
 

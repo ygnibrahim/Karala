@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { messageText, useT } from '../../i18n';
 import { useMuted } from '../../lib/muted';
 import { socket } from '../../lib/socket';
@@ -18,9 +18,30 @@ export default function Chat({ data, compact = false, placeholder: customPlaceho
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Liste en altta kalsın: yeni mesaj gelince ve alan küçülünce (klavye açılınca) son mesaj görünür.
+  // Kullanıcı eski mesajları okumak için yukarı kaydırdıysa yerinden oynatılmaz.
+  const atBottom = useRef(true);
+  const lastId = messages[messages.length - 1]?.id;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: son mesaj değişince (yeni mesaj gelince) çalışmalı
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (el && atBottom.current) el.scrollTop = el.scrollHeight;
+  }, [lastId]);
   useEffect(() => {
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const onScroll = () => {
+      atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    };
+    const ro = new ResizeObserver(() => {
+      if (atBottom.current) el.scrollTop = el.scrollHeight;
+    });
+    el.addEventListener('scroll', onScroll, { passive: true });
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+    };
   }, []);
 
   const me = room.players.find((p) => p.id === meId);

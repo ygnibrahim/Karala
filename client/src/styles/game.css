@@ -37,27 +37,42 @@
   font-weight: 800;
 }
 .hint {
+  --slot: 0.85em;
+  --slot-gap: 6px;
   display: inline-flex;
   align-items: flex-end;
-  gap: 6px;
+  column-gap: calc(var(--slot-gap) * 2.5);
+  row-gap: 4px;
   flex-wrap: wrap;
   justify-content: center;
 }
+/* Bir kelimenin harfleri hiçbir zaman iki satıra bölünmez. */
+.hint-word {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--slot-gap);
+  white-space: nowrap;
+}
 .hint .blank,
 .hint .letter {
-  width: 0.85em;
+  width: var(--slot);
   border-bottom: 3px solid var(--ink);
+  border-radius: 2px;
   text-align: center;
   line-height: 1.1;
   min-height: 1.2em;
 }
-.hint .gap {
-  width: 0.6em;
-}
-.hint sup {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-left: 4px;
+/* Harf sayısı: küçük ama okunur bir rozet. */
+.hint-count {
+  align-self: center;
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--ink);
+  background: #f1effa;
+  border-radius: 999px;
+  padding: 4px 7px;
+  white-space: nowrap;
 }
 .word-secret {
   color: var(--bg1);

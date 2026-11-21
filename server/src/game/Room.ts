@@ -100,6 +100,8 @@ export class Room {
   /** Bu oyunda çizilen resimler: oyun sonunda istenince gönderilir, yeni oyunda sıfırlanır. */
   private gallery: GalleryItem[] = [];
   private galleryPoints = 0;
+  /** Klasik modda bu turun çizeninin adı: çizen turu yarıda bırakıp çıksa da galeride adı görünsün. */
+  private drawerName: string | null = null;
   private msgId = 0;
   /** Oda sahibinin çıkardığı oyuncuların oturum anahtarları: aynı odaya geri giremezler. */
   private banned = new Set<string>();
@@ -409,6 +411,7 @@ export class Room {
 
     this.phase = 'choosing';
     this.drawerId = drawer.id;
+    this.drawerName = drawer.name;
     this.word = null;
     this.choices = pickWords(wordPool(this.settings), this.usedWords, 3);
     this.canvas.reset();
@@ -457,7 +460,7 @@ export class Room {
     const word = this.word ?? '';
     this.phase = 'turnEnd';
     this.turnResult = { word, drawerId: this.drawerId, gains: { ...this.turnGains }, reason };
-    if (word) this.archive(word, this.drawerId, null, this.canvas.items);
+    if (word) this.archive(word, this.drawerName, null, this.canvas.items);
     this.setPhaseTimer(TIMING.turnEndMs);
     if (word) this.system('wordWas', { word });
     this.broadcastState();
@@ -477,15 +480,14 @@ export class Room {
   // ---------- Galeri ----------
 
   /** Biten turun çizimini galeriye ekler (boşsa ya da sınır dolduysa eklemez). */
-  private archive(word: string, drawerId: string | null, team: TeamId | null, drawing: DrawItem[]): void {
+  private archive(word: string, drawerName: string | null, team: TeamId | null, drawing: DrawItem[], together = false): void {
     if (drawing.length === 0 || this.gallery.length >= GALLERY.maxItems) return;
     const points = drawing.reduce((n, it) => n + (it.k === 'stroke' ? it.pts.length / 2 : 1), 0);
     if (this.galleryPoints + points > GALLERY.maxPoints) return;
     this.galleryPoints += points;
-    const drawerName = drawerId ? (this.findPlayer(drawerId)?.name ?? null) : null;
     // Kopya: tuval yeni turda sıfırlansa da galerideki çizim değişmesin.
     const copy = drawing.map((it) => (it.k === 'stroke' ? { ...it, pts: [...it.pts] } : { ...it }));
-    this.gallery.push({ word, drawerName, team, drawing: copy });
+    this.gallery.push({ word, drawerName, team, together, drawing: copy });
   }
 
   private clearGallery(): void {
@@ -773,7 +775,7 @@ export class Room {
         },
         system: (key, vars) => this.system(key, vars),
         finished: () => this.endImpostor(),
-        archive: (word) => this.archive(word, null, null, this.canvas.items),
+        archive: (word) => this.archive(word, null, null, this.canvas.items, true),
       },
     );
     this.system('impostorStarted');
@@ -874,7 +876,8 @@ export class Room {
       },
       system: (key, vars) => this.system(key, vars),
       finished: (score) => this.endTeams(score),
-      archive: (word, team, drawerId, drawing) => this.archive(word, drawerId, team, drawing),
+      archive: (word, team, drawerId, drawing) =>
+        this.archive(word, drawerId ? (this.findPlayer(drawerId)?.name ?? null) : null, team, drawing),
     });
     this.system('teamsStarted');
     this.teamRace.start();

@@ -224,7 +224,7 @@ describe('klasik mod: oyun sonu galerisi', () => {
     game.others[0].socket.emit('gallery:get');
     const gallery = await got;
     expect(gallery.map((g) => g.word)).toEqual(words);
-    expect(gallery.every((g) => g.drawerName && g.team === null && g.drawing.length === 1)).toBe(true);
+    expect(gallery.every((g) => g.drawerName && g.team === null && !g.together && g.drawing.length === 1)).toBe(true);
     expect(gallery[0].drawing[0]).toMatchObject({ k: 'stroke', pts: [10, 10, 20, 20, 30, 30] });
 
     // Yeni oyun başlayınca galeri sıfırlanır.
