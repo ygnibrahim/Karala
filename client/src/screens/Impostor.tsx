@@ -229,7 +229,13 @@ function Result({ room, imp, meId }: { room: RoomState; imp: ImpostorPublic; meI
   if (!r) return null;
   const nameOf = (id: string) => room.players.find((p) => p.id === id)?.name ?? t('common.someone');
   const iWasImpostor = r.impostorId === meId;
-  const headline = !r.caught ? t('imp.escaped') : r.guessedRight ? t('imp.caughtButKnew') : t('imp.caught');
+  const headline = r.left
+    ? t('imp.left')
+    : !r.caught
+      ? t('imp.escaped')
+      : r.guessedRight
+        ? t('imp.caughtButKnew')
+        : t('imp.caught');
   const counts = new Map<string, number>();
   for (const target of Object.values(r.votes)) counts.set(target, (counts.get(target) ?? 0) + 1);
 

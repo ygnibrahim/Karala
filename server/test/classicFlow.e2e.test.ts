@@ -13,6 +13,7 @@ import {
   join,
   nextEvent,
   payload,
+  reconnect,
   settle,
   setupRoom,
   startDrawing,
@@ -275,4 +276,85 @@ describe('klasik mod: oyun sonu galerisi', () => {
     await settle();
     expect(eventsOf(game.host, 'game:gallery')).toHaveLength(0);
   }, 30_000);
+});
+
+describe('klasik mod: oyuncu çıkınca / bağlantı kopunca sıra', () => {
+  /** `from` sonrası ilk kelime seçme ya da oyun sonu durumu. */
+  const choosingOrEnd = (c: Client, from: number) =>
+    nextEvent<RoomState>(c, 'room:state', (s) => s.phase === 'choosing' || s.phase === 'gameEnd', from);
+
+  it('2 kişilik oyunda çizen çıkarsa kalan oyuncu tek başına oynamaz, lobiye döner', async () => {
+    const game = await setupRoom(ts, 1);
+    const { drawer, guessers } = await startDrawing(game);
+    const from = guessers[0].log.length;
+    drawer.emit('room:leave');
+    const back = await nextEvent<RoomState>(guessers[0], 'room:state', (s) => s.phase === 'lobby', from);
+    expect(back.players).toHaveLength(1);
+  });
+
+  it('sırası geldiğinde bağlantısı kopuk olan oyuncu geri dönünce aynı turda yine çizer', async () => {
+    const game = await setupRoom(ts, 2); // sıra: ev sahibi, Oyuncu1, Oyuncu2
+    game.host.emit('room:settings', { rounds: 2 });
+    await waitForState(game.host, (s) => s.settings.rounds === 2);
+    const [o1, o2] = game.others;
+
+    // 1. çizim: ev sahibi. Oyuncu1 bilir, sonra bağlantısı kopar; Oyuncu2 bilince sıra Oyuncu1'e gelir.
+    const { word } = await startDrawing(game);
+    let from = game.host.log.length;
+    o1.socket.emit('chat:send', word);
+    await nextEvent<RoomState>(game.host, 'room:state', (s) => !!s.players.find((p) => p.id === o1.id)?.guessed, from);
+    o1.socket.disconnect();
+    await settle(100);
+    from = game.host.log.length;
+    o2.socket.emit('chat:send', word);
+    const second = await nextEvent<RoomState>(game.host, 'room:state', (s) => s.phase === 'choosing', from);
+    expect(second.drawerId).toBe(o2.id); // Oyuncu1 kopuk olduğu için atlandı
+
+    // Oyuncu1 geri döner; Oyuncu2'nin turu bitince sıra ona gelmeli (eskiden oyun bitiyordu).
+    const back = await reconnect(ts, o1.socket, 'Oyuncu1', o1.sessionId, game.code);
+    expect(back.res.ok).toBe(true);
+    const before = o2.socket.log.length;
+    o2.socket.emit('word:choose', 0);
+    const word2 = await nextEvent<string>(o2.socket, 'word:secret', () => true, before);
+    from = game.host.log.length;
+    game.host.emit('chat:send', word2);
+    back.socket.emit('chat:send', word2);
+    const third = await choosingOrEnd(game.host, from);
+    expect(third.phase).toBe('choosing');
+    expect(third.drawerId).toBe(o1.id);
+  }, 20_000);
+
+  it('bu turda çizmiş oyuncu çıkıp yeniden girerse aynı turda ikinci kez çizmez', async () => {
+    const game = await setupRoom(ts, 2); // sıra: ev sahibi, Oyuncu1, Oyuncu2
+    game.host.emit('room:settings', { rounds: 2 });
+    await waitForState(game.host, (s) => s.settings.rounds === 2);
+    const [o1, o2] = game.others;
+    let from = game.host.log.length;
+    game.host.emit('game:start');
+    const first = await choosingOrEnd(game.host, from);
+    from = game.host.log.length;
+    await playTurn(game, first); // ev sahibi çizdi
+    const second = await choosingOrEnd(game.host, from);
+    expect(second.drawerId).toBe(o1.id);
+    from = game.host.log.length;
+    await playTurn(game, second); // Oyuncu1 çizdi
+    const third = await choosingOrEnd(game.host, from);
+    expect(third.drawerId).toBe(o2.id);
+
+    // Oyuncu1 çıkar ve aynı oturumla yeniden girer: yeni oyuncu sayılır ama bu turda çizmiş.
+    o1.socket.emit('room:leave');
+    await settle();
+    const socket = await connectClient(ts);
+    const rejoined = await join(socket, payload('Oyuncu1', { code: game.code, sessionId: o1.sessionId }));
+    if (!rejoined.ok) throw new Error(rejoined.error);
+    game.others[0] = { socket, id: rejoined.playerId, sessionId: o1.sessionId };
+    await settle();
+
+    from = game.host.log.length;
+    await playTurn(game, third); // Oyuncu2 çizdi
+    const after = await choosingOrEnd(game.host, from);
+    // Sıradaki: 2. turun ilk çizeni (ev sahibi); Oyuncu1 1. turda ikinci kez çizmedi.
+    expect(after.round).toBe(2);
+    expect(after.drawerId).toBe(game.hostId);
+  }, 20_000);
 });

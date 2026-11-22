@@ -339,3 +339,31 @@ describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
     expect(lobby.teams?.score).toEqual({ red: 0, blue: 0 });
   }, 20_000);
 });
+
+describe('Çizim Yarışı: çizen odadan çıkınca', () => {
+  it('takımdan başka biri aynı turda çizmeye devam eder ve kelimeyi alır', async () => {
+    const { game, all } = await teamsRoom(5); // 6 kişi: takım başına 3
+    const { state, blue } = await startRace(game, all);
+    const leaver = blue.drawer; // ev sahibi kırmızıda
+    if (leaver.socket === game.host) throw new Error('test için çizen ev sahibi olmamalı');
+    const from = game.host.log.length;
+    leaver.socket.emit('room:leave');
+    const next = await nextEvent<RoomState>(
+      game.host,
+      'room:state',
+      (s) => !!s.teams?.race?.drawers.blue && s.teams.race.drawers.blue !== leaver.id,
+      from,
+    );
+    // Aynı tur, aynı aşama; yeni çizen mavi takımdan.
+    expect(next.teams?.race?.turn).toBe(state.teams?.race?.turn);
+    expect(next.teams?.race?.stage).toBe('draw');
+    const newDrawer = blue.guessers.find((m) => m.id === next.teams?.race?.drawers.blue);
+    if (!newDrawer) throw new Error('yeni çizen mavi takımdan değil');
+    // İlk turda tahmin edendi; kelime şimdi ona da gelir.
+    expect(await nextEvent<string>(newDrawer.socket, 'word:secret')).toBe(eventsOf(leaver.socket, 'word:secret').at(-1));
+    // Yeni çizen çizebilir; çizimi takımına gider.
+    const mate = blue.guessers.find((m) => m !== newDrawer) as Member;
+    for (const op of stroke) newDrawer.socket.emit('draw:op', op);
+    await nextEvent(mate.socket, 'draw:op', (op: DrawOp) => op.t === 'move');
+  }, 20_000);
+});

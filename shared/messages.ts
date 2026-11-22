@@ -35,6 +35,7 @@ export type MessageKey =
   | 'impostorEscaped'
   | 'impostorCaughtButKnew'
   | 'impostorCaught'
+  | 'impostorLeft'
   // Çizim Yarışı
   | 'teamsShuffled'
   | 'teamsNeedPlayers'

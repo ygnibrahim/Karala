@@ -240,6 +240,7 @@ export const tr = {
   'imp.escaped': 'Sahtekâr kaçtı! 🏃',
   'imp.caughtButKnew': 'Yakalandı ama kelimeyi bildi! 😮',
   'imp.caught': 'Sahtekâr yakalandı! 🎉',
+  'imp.left': 'Sahtekâr oyundan çıktı 🚪',
   'imp.theirGuess': 'tahmini: “{guess}”',
   'imp.voteCount': '{n} oy',
 
@@ -306,6 +307,7 @@ export const tr = {
   'msg.impostorEscaped': '{name} sahtekârdı ve kaçtı! 🕵️ Kelime "{word}" idi.',
   'msg.impostorCaughtButKnew': '{name} yakalandı ama kelimeyi bildi: "{word}"!',
   'msg.impostorCaught': '{name} yakalandı! Kelime "{word}" idi. 🎉',
+  'msg.impostorLeft': 'Sahtekâr {name} oyundan çıktı, bu tur puansız. Kelime "{word}" idi.',
   'msg.teamsShuffled': 'Takımlar karıştırıldı 🔀',
   'msg.teamsNeedPlayers': 'Her takımda en az {count} oyuncu olmalı ({team} eksik).',
   'msg.teamsStarted': 'Çizim Yarışı başladı! İlk bilen takım turu alır 🏁',

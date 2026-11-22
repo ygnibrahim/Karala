@@ -76,6 +76,8 @@ export class Room {
   drawerId: string | null = null;
 
   private queue: string[] = [];
+  /** Klasik modda bu turda çizmiş oturumlar: çıkıp yeniden giren ikinci kez çizmesin. */
+  private drewThisRound = new Set<string>();
   private choices: string[] = [];
   private word: string | null = null;
   private revealed = new Set<number>();
@@ -144,6 +146,8 @@ export class Room {
       }
       player.socketId = socket.id;
       if (player.id === this.drawerId) this.clearDrawerGrace();
+      // Bağlantısı koptuğu sırada sırası geldiyse atlanmıştı: bu turda çizmediyse sıraya geri girer.
+      else if (!this.queue.includes(player.id)) this.queueLateDrawer(player);
       // Geri dönen oyuncu odadaki adını/avatarını korur.
       if (!previousSocket) this.system('returned', { name: player.name });
     } else {
@@ -164,7 +168,7 @@ export class Room {
       this.teamOf.set(player.id, this.smallerTeam());
       // Klasik oyun sürerken gelen oyuncu bu turun çizim sırasına eklenir: sonraki turu beklemesin
       // (son turda katılan hiç çizemezdi).
-      if (isActiveTurn(this.phase) || this.phase === 'turnEnd') this.queue.push(player.id);
+      this.queueLateDrawer(player);
       // Sahtekâr modunda bir sonraki turdan itibaren oyuna katılır.
       this.impostor?.addParticipant(player.id);
       this.system('joined', { name });
@@ -175,6 +179,13 @@ export class Room {
     this.broadcastState();
     this.sendPrivateState(socket, player);
     return { ok: true, playerId: player.id };
+  }
+
+  /** Klasik oyun sürerken gelen (ya da geri dönen) oyuncu, bu turda çizmediyse çizim sırasına eklenir. */
+  private queueLateDrawer(p: Player): void {
+    if (!isActiveTurn(this.phase) && this.phase !== 'turnEnd') return;
+    if (this.drewThisRound.has(p.sessionId)) return;
+    this.queue.push(p.id);
   }
 
   /** Bağlantı koptu: oyuncunun geri dönmesi için kısa bir süre bekle. */
@@ -226,12 +237,10 @@ export class Room {
       return;
     }
     this.reassignHost();
-    if (p.id === this.drawerId && isActiveTurn(this.phase)) {
-      this.endTurn('drawerLeft');
-    } else {
-      this.checkEnoughPlayers();
-      this.checkAllGuessed();
-    }
+    if (p.id === this.drawerId && isActiveTurn(this.phase)) this.endTurn('drawerLeft');
+    // Çizen çıktıysa da bakılır: 2 kişilik oyunda kalan oyuncu tek başına oynamasın.
+    this.checkEnoughPlayers();
+    this.checkAllGuessed();
     this.telephone?.onPresenceChange();
     this.impostor?.onPresenceChange();
     this.teamRace?.onPresenceChange();
@@ -362,6 +371,7 @@ export class Room {
     this.usedWords.clear();
     this.round = 1;
     this.queue = this.connectedPlayers.map((p) => p.id);
+    this.drewThisRound.clear();
     this.system('gameStarted');
     this.nextTurn();
   }
@@ -417,6 +427,7 @@ export class Room {
     this.phase = 'choosing';
     this.drawerId = drawer.id;
     this.drawerName = drawer.name;
+    this.drewThisRound.add(drawer.sessionId);
     this.word = null;
     this.choices = pickWords(wordPool(this.settings), this.usedWords, 3);
     this.canvas.reset();
@@ -438,6 +449,7 @@ export class Room {
         this.round++;
         if (this.round > this.settings.rounds) return 'gameOver';
         this.queue = this.connectedPlayers.map((p) => p.id);
+        this.drewThisRound.clear();
         if (this.queue.length === 0) return null;
       }
       const p = this.findPlayer(this.queue.shift() as string);

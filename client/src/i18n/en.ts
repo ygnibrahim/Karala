@@ -241,6 +241,7 @@ export const en: Record<Key, string> = {
   'imp.escaped': 'The impostor got away! 🏃',
   'imp.caughtButKnew': 'Caught, but they guessed the word! 😮',
   'imp.caught': 'The impostor was caught! 🎉',
+  'imp.left': 'The impostor left the game 🚪',
   'imp.theirGuess': 'their guess: “{guess}”',
   'imp.voteCount': '{n} votes',
 
@@ -307,6 +308,7 @@ export const en: Record<Key, string> = {
   'msg.impostorEscaped': '{name} was the impostor and got away! 🕵️ The word was "{word}".',
   'msg.impostorCaughtButKnew': '{name} was caught but guessed the word: "{word}"!',
   'msg.impostorCaught': '{name} was caught! The word was "{word}". 🎉',
+  'msg.impostorLeft': 'The impostor {name} left the game, no points this round. The word was "{word}".',
   'msg.teamsShuffled': 'Teams shuffled 🔀',
   'msg.teamsNeedPlayers': 'Each team needs at least {count} players ({team} is short).',
   'msg.teamsStarted': 'Drawing Race has started! First team to guess wins the round 🏁',

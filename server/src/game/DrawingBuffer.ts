@@ -20,6 +20,13 @@ export class DrawingBuffer {
       return false;
     }
     if (op.t !== 'move') this.strokeOpen = op.t === 'start';
+    // Silinen çizginin noktaları sınırdan düşülür: temizleyip yeniden çizen sınıra takılmasın.
+    if (op.t === 'clear') this.points = 0;
+    if (op.t === 'undo') {
+      const last = this.items[this.items.length - 1];
+      // 'start'ın ilk noktası (2 sayı) sayılmaz; sadece 'move' noktaları sayılır.
+      if (last?.k === 'stroke') this.points = Math.max(0, this.points - (last.pts.length - 2));
+    }
     applyOp(this.items, op);
     return true;
   }

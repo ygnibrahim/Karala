@@ -207,3 +207,29 @@ describe('Sahtekâr uçtan uca', () => {
     expect(end.players.find((x) => x.id === s.impostor.id)?.score).toBe(0);
   }, 30_000);
 });
+
+describe('Sahtekâr: sahtekâr odadan çıkınca', () => {
+  it('tur puansız biter, kelime açıklanır, sonuçta "çıktı" görünür', async () => {
+    const game = await setupRoom(ts, 3); // 4 kişi: sahtekâr çıkınca 3 kişi kalır
+    game.host.emit('room:settings', { mode: 'impostor', rounds: 2 });
+    await waitForState(game.host, (st) => st.settings.mode === 'impostor');
+    const all = [{ socket: game.host, id: game.hostId }, ...game.others];
+    const roles = all.map((p) => waitFor<ImpostorRole>(p.socket, 'imp:role'));
+    game.host.emit('game:start');
+    const received = await Promise.all(roles);
+    const imp = all[received.findIndex((r) => r.isImpostor)];
+    const word = received.find((r) => !r.isImpostor)?.word;
+    const watcher = all.find((p) => p !== imp) as (typeof all)[number];
+    await waitForState(watcher.socket, (st) => st.impostor?.stage === 'draw', 8000);
+
+    imp.socket.emit('room:leave');
+    const done = await waitForState(watcher.socket, (st) => st.impostor?.stage === 'result', 3000);
+    expect(done.impostor?.result?.left).toBe(true);
+    expect(done.impostor?.result?.impostorId).toBe(imp.id);
+    expect(done.impostor?.result?.word).toBe(word);
+    expect(done.impostor?.result?.gains).toEqual({});
+    expect(done.players.every((p) => p.score === 0)).toBe(true);
+    const note = eventsOf(watcher.socket, 'chat:message').find((m) => (m as ChatMessage).key === 'impostorLeft') as ChatMessage;
+    expect(note?.vars).toMatchObject({ word });
+  }, 20_000);
+});

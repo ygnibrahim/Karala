@@ -137,6 +137,8 @@ export interface ImpostorResult {
   guess: string | null;
   guessedRight: boolean;
   gains: Record<string, number>;
+  /** Sahtekâr tur bitmeden odadan çıktı (tur puansız bitti). */
+  left?: boolean;
 }
 
 /** Herkese açık Sahtekâr durumu: sahtekârın kim olduğu ve kelime sonuç aşamasına kadar yoktur. */

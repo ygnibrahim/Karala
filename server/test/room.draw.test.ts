@@ -2,6 +2,7 @@
 import type { DrawOp } from '@shared';
 import { describe, expect, it } from 'vitest';
 import { SERVER_LIMITS } from '../src/config';
+import { DrawingBuffer } from '../src/game/DrawingBuffer';
 import { type GameSocket, type IO, Room } from '../src/game/Room';
 
 function setup() {
@@ -55,5 +56,34 @@ describe('Room.draw', () => {
     room.draw(socket, 'cizen', { t: 'fill', color: '#ff0000', x: 5, y: 5 });
     expect(room.draw(socket, 'cizen', move)).toBe(false);
     expect(relayed.map((o) => o.t)).toEqual(['start', 'fill']);
+  });
+});
+
+describe('DrawingBuffer nokta sınırı', () => {
+  /** Açık çizgiye toplam n sayı ekler (her işlemde en fazla 400); hepsi kabul edildiyse true. */
+  const fill = (buf: DrawingBuffer, n: number): boolean => {
+    let ok = true;
+    for (let left = n; left > 0; left -= 400) ok = buf.apply({ t: 'move', pts: new Array(Math.min(400, left)).fill(1) }) && ok;
+    return ok;
+  };
+  const limit = SERVER_LIMITS.maxHistoryPoints;
+
+  it('temizledikten sonra sınır sıfırlanır', () => {
+    const buf = new DrawingBuffer();
+    expect(buf.apply(start)).toBe(true);
+    expect(fill(buf, limit - 10)).toBe(true);
+    expect(fill(buf, 20)).toBe(false); // sınır doldu
+    expect(buf.apply({ t: 'clear' })).toBe(true);
+    expect(buf.apply(start)).toBe(true);
+    expect(fill(buf, limit - 10)).toBe(true);
+  });
+
+  it('geri alınan çizginin noktaları sınırdan düşülür', () => {
+    const buf = new DrawingBuffer();
+    expect(buf.apply(start)).toBe(true);
+    expect(fill(buf, limit - 10)).toBe(true);
+    expect(buf.apply({ t: 'undo' })).toBe(true);
+    expect(buf.apply(start)).toBe(true);
+    expect(fill(buf, limit - 10)).toBe(true);
   });
 });

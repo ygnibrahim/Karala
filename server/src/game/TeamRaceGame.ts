@@ -224,7 +224,20 @@ export class TeamRaceGame {
     if (!this.teamsPlayable()) {
       this.hooks.system('teamTooSmall');
       this.finish();
+      return;
     }
+    if (this.stage !== 'intro' && this.stage !== 'draw') return;
+    // Çizen odadan tamamen çıktıysa takımı boş tuvale bakmasın: takımdan başka biri devam eder.
+    let replaced = false;
+    for (const team of TEAM_IDS) {
+      const drawer = this.drawers[team];
+      if (!drawer || this.hooks.find(drawer)) continue;
+      const next = this.nextDrawer(team);
+      this.drawers[team] = next;
+      if (next) this.hooks.sendSecret(next, this.word);
+      replaced = true;
+    }
+    if (replaced) this.hooks.changed();
   }
 
   // ---------- Durum ----------

@@ -54,6 +54,8 @@ export default function App() {
   const [inviteCode, setInviteCode] = useState(roomFromUrl);
   const lastState = useRef<RoomState | null>(null);
   const meIdRef = useRef('');
+  /** Kullanıcı odadan çıktı: sunucunun çıkıştan önce yolladığı (geç gelen) oda durumu ekranı geri açmasın. */
+  const leftRef = useRef(false);
 
   const handleAck = useCallback((res: AckResult) => {
     setBusy(false);
@@ -87,6 +89,7 @@ export default function App() {
       // Sayfa yenilendi ya da bağlantı koptuysa odaya otomatik geri dön.
       const code = getActiveRoom();
       if (!code) return;
+      leftRef.current = false;
       // Kullanıcı başka bir odanın davet linkiyle geldiyse eski odaya dönme: davet öncelikli.
       const invite = roomFromUrl();
       if (invite && invite !== code) {
@@ -110,6 +113,7 @@ export default function App() {
     };
     const onDisconnect = () => setConnected(false);
     const onState = (s: RoomState) => {
+      if (leftRef.current) return;
       stateFx(lastState.current, s, meIdRef.current);
       // Takım modunda yeni tur: önceki turun kelimesi silinsin (yeni çizenlere kelime bu durumdan sonra gelir).
       if (s.teams?.race && lastState.current?.teams?.race?.turn !== s.teams.race.turn) setSecret(null);
@@ -122,6 +126,7 @@ export default function App() {
       if (s.phase !== 'impostor') setRole(null);
     };
     const onKicked = () => {
+      leftRef.current = true;
       resetRoom();
       setError('kickedByHost');
     };
@@ -165,6 +170,7 @@ export default function App() {
 
   const enter = (mode: 'create' | 'join', code?: string) => {
     saveProfile(profile);
+    leftRef.current = false;
     setBusy(true);
     setMessages([]);
     const payload: JoinPayload = { ...profile, sessionId, code, lang: getLang() };
@@ -180,6 +186,7 @@ export default function App() {
   };
 
   const leave = () => {
+    leftRef.current = true;
     socket.emit('room:leave');
     resetRoom();
   };

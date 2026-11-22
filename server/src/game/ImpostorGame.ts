@@ -63,6 +63,8 @@ export class ImpostorGame {
   private pastImpostors = new Set<string>();
   private order: string[] = [];
   private impostorId = '';
+  /** Sahtekârın adı: odadan çıksa da mesajda görünsün. */
+  private impostorName = '';
   private word = '';
   private category = '';
   /** Toplam sıra sayacı: order.length * laps'e ulaşınca çizim biter. */
@@ -108,6 +110,7 @@ export class ImpostorGame {
       candidates = present;
     }
     this.impostorId = randomItem(candidates);
+    this.impostorName = this.hooks.find(this.impostorId)?.name ?? '?';
     this.pastImpostors.add(this.impostorId);
 
     const { word, category } = this.hooks.pickWord();
@@ -181,6 +184,24 @@ export class ImpostorGame {
     this.setStage('result', IMPOSTOR.resultMs, () => this.nextRound());
   }
 
+  /** Sahtekâr tur bitmeden odadan çıktı: tur puansız biter, kelime açıklanır, sonraki tura geçilir. */
+  private abandonRound(): void {
+    const votes = Object.fromEntries(this.votes);
+    this.result = {
+      impostorId: this.impostorId,
+      word: this.word,
+      votes,
+      caught: false,
+      guess: null,
+      guessedRight: false,
+      gains: {},
+      left: true,
+    };
+    this.hooks.archive?.(this.word);
+    this.hooks.system('impostorLeft', { name: this.impostorName, word: this.word });
+    this.setStage('result', IMPOSTOR.resultMs, () => this.nextRound());
+  }
+
   // ---------- Oyuncu işlemleri ----------
 
   /** Bu oyuncunun çizme sırası mı? */
@@ -222,6 +243,11 @@ export class ImpostorGame {
 
   /** Bağlantı değişti: sırası gelen ayrıldıysa geç, oylama/tahmin bekliyorsa yeniden değerlendir. */
   onPresenceChange(): void {
+    // Sahtekâr odadan tamamen çıktıysa çizmeye ve oylamaya devam etmenin anlamı yok.
+    if ((this.stage === 'intro' || this.stage === 'draw') && this.impostorId && !this.hooks.find(this.impostorId)) {
+      this.abandonRound();
+      return;
+    }
     // Anlık kopmalarda süre dolana kadar beklenir; sadece odadan tamamen çıkan oyuncu atlanır.
     if (this.stage === 'draw') {
       const drawer = this.currentDrawer();
