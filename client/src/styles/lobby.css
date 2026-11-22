@@ -5,6 +5,9 @@
   max-width: 1150px;
   margin: 0 auto;
   padding: 16px;
+  /* Telefonun çentik / durum çubuğu altında kalmasın (Android uygulaması, iOS ana ekran). */
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 .lobby-head {
   display: flex;

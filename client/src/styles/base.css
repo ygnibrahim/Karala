@@ -72,6 +72,7 @@ textarea {
   color: #fff;
   text-align: center;
   padding: 4px;
+  padding-top: max(4px, env(safe-area-inset-top));
   font-weight: 700;
 }
 

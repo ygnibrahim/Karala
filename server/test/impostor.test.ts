@@ -5,8 +5,11 @@ import { IMPOSTOR_SCORING } from '../src/config';
 import { impostorGains, isCaught } from '../src/game/ImpostorGame';
 import {
   type Client,
+  connectClient,
   eventsOf,
   type Game,
+  join,
+  payload,
   settle,
   setupRoom,
   startServer,
@@ -127,6 +130,42 @@ describe('Sahtekâr uçtan uca', () => {
     await settle();
     expect(JSON.stringify(s.impostor.socket.log)).not.toContain(s.word);
   }, 20_000);
+
+  it('oyun sırasında gelen oyuncu o turda rol/puan almaz, sonraki turda oyuna katılır', async () => {
+    const s = await startImpostor();
+    const socket = await connectClient(ts);
+    const p = payload('Geç Gelen', { code: s.game.code });
+    const joined = await join(socket, p);
+    if (!joined.ok) throw new Error(joined.error);
+    await settle();
+    expect(eventsOf(socket, 'imp:role')).toHaveLength(0);
+    expect(lastState(s.game.host).impostor?.order).not.toContain(joined.playerId);
+
+    // 1. turu bitir: herkes pas geçer, sahtekâr yakalanır, yanlış tahmin eder.
+    await currentTurn(s);
+    for (let i = 0; i < 6; i++) {
+      const st = lastState(s.game.host).impostor;
+      const turn = s.players.find((x) => x.id === st?.turnPlayerId);
+      if (!turn) break;
+      const next = waitForState(s.game.host, (x) => x.impostor?.stage === 'vote' || x.impostor?.turnPlayerId !== turn.id);
+      turn.socket.emit('imp:done');
+      await next;
+    }
+    const guessing = waitForState(s.game.host, (st) => st.impostor?.stage === 'guess');
+    for (const x of s.players) x.socket.emit('imp:vote', x.role.isImpostor ? s.players.find((y) => y !== x)?.id : s.impostor.id);
+    await guessing;
+    const result = waitForState(s.game.host, (st) => st.impostor?.stage === 'result');
+    s.impostor.socket.emit('imp:guess', 'kesinlikle yanlış bir tahmin');
+    const end = await result;
+    // Oynamadığı turdan puan almadı.
+    expect(end.players.find((x) => x.id === joined.playerId)?.score).toBe(0);
+
+    // 2. tur: rolünü alır ve çizim sırasında yer alır.
+    const role = await waitFor<ImpostorRole>(socket, 'imp:role', () => true, 15_000);
+    expect(role.round).toBe(2);
+    const round2 = await waitForState(s.game.host, (st) => st.impostor?.round === 2, 8000).catch(() => lastState(s.game.host));
+    expect(round2.impostor?.order).toContain(joined.playerId);
+  }, 40_000);
 
   it('tam tur: çizim → oylama → yakalanma → yanlış tahmin → puanlar', async () => {
     const s = await startImpostor();

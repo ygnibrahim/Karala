@@ -59,6 +59,8 @@ export class TeamRaceGame {
   /** Her takımda sıradaki çizenin sırası. */
   private drawCount: Record<TeamId, number> = { red: 0, blue: 0 };
   private drawers: Record<TeamId, string | null> = { red: null, blue: null };
+  /** Bu oyunda kim kaç kez çizdi. */
+  private readonly drawsBy = new Map<string, number>();
   private word = '';
   private revealed = new Set<number>();
   private result: TeamRacePublic['result'] = null;
@@ -101,17 +103,23 @@ export class TeamRaceGame {
     }
   }
 
-  /** Takımda sırası gelen ve bağlı olan ilk oyuncu. */
+  /**
+   * Takımda bağlı oyuncular arasından en az çizmiş olan; eşitlikte sıradaki. Sonradan katılan
+   * (ya da takım değiştiren) oyuncu böylece hemen sıraya girer, oyun bitmeden çizme hakkı alır.
+   */
   private nextDrawer(team: TeamId): string | null {
     const members = this.hooks.members(team);
+    let best: { id: string; step: number; draws: number } | null = null;
     for (let i = 0; i < members.length; i++) {
       const id = members[(this.drawCount[team] + i) % members.length];
-      if (this.hooks.find(id)?.socketId) {
-        this.drawCount[team] += i + 1;
-        return id;
-      }
+      if (!this.hooks.find(id)?.socketId) continue;
+      const draws = this.drawsBy.get(id) ?? 0;
+      if (!best || draws < best.draws) best = { id, step: i, draws };
     }
-    return null;
+    if (!best) return null;
+    this.drawCount[team] += best.step + 1;
+    this.drawsBy.set(best.id, best.draws + 1);
+    return best.id;
   }
 
   private startDrawing(): void {

@@ -18,5 +18,7 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+: sistem açılış ekranı Karala moru üstünde uygulama ikonu. -->
+        <item name="windowSplashScreenBackground">#6C4CF5</item>
     </style>
 </resources>

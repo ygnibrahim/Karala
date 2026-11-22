@@ -1,4 +1,5 @@
 import { AVATAR_COLORS, AVATAR_FACES, type Avatar, SESSION_TOKEN_PATTERN } from '@shared';
+import { isStandalone } from './pwa';
 
 // Depolama gizli sekmede vs. kapalı olabilir; her erişimi korumaya al.
 function safeGet(store: () => Storage, key: string): string | null {
@@ -19,6 +20,12 @@ function safeSet(store: () => Storage, key: string, value: string | null) {
 
 const local = () => window.localStorage;
 const tab = () => window.sessionStorage;
+/**
+ * Oturum anahtarı ve odanın tutulduğu yer. Tarayıcıda sekmeye özel (iki sekme = iki oyuncu).
+ * Yüklü uygulamada (Android uygulaması, ana ekrandaki PWA) tek pencere var ve işletim sistemi onu arka
+ * planda kapatabilir; sekme deposu o zaman silinir ve oyuncu odadan düşerdi. Orada kalıcı depo kullanılır.
+ */
+const sessionStore = (): (() => Storage) => (isStandalone() ? local : tab);
 
 /** Kriptografik olarak güçlü, URL-güvenli rastgele anahtar (güvensiz http bağlamında da çalışır). */
 function randomToken(bytes = 18): string {
@@ -31,14 +38,15 @@ function randomToken(bytes = 18): string {
 }
 
 /**
- * Sekme başına gizli oturum anahtarı: sayfa yenilense de aynı oyuncu olarak geri döneriz.
+ * Gizli oturum anahtarı: sayfa yenilense (ya da uygulama yeniden açılsa) de aynı oyuncu olarak geri döneriz.
  * Bu anahtar sadece sunucuya gönderilir; diğer oyuncular hiçbir zaman görmez.
  */
 export function getSessionId(): string {
-  let id = safeGet(tab, 'karala.session');
+  const store = sessionStore();
+  let id = safeGet(store, 'karala.session');
   if (!id || !SESSION_TOKEN_PATTERN.test(id)) {
     id = randomToken();
-    safeSet(tab, 'karala.session', id);
+    safeSet(store, 'karala.session', id);
   }
   return id;
 }
@@ -72,11 +80,11 @@ export function saveProfile(p: Profile) {
 }
 
 export function getActiveRoom(): string | null {
-  return safeGet(tab, 'karala.room');
+  return safeGet(sessionStore(), 'karala.room');
 }
 
 export function setActiveRoom(code: string | null) {
-  safeSet(tab, 'karala.room', code);
+  safeSet(sessionStore(), 'karala.room', code);
 }
 
 /** Davet linkindeki ?oda=KOD parametresi. */

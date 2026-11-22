@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- Play Store tanıtım görseli (1024×500). Yeniden üretmek için: store/README.md -->
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-ext-800-normal.woff2') format('woff2'); unicode-range: U+0100-024F; }
+  @font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-ext-700-normal.woff2') format('woff2'); unicode-range: U+0100-024F; }
+  @font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-700-normal.woff2') format('woff2'); }
+  html, body { margin: 0; width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    font-family: 'Baloo 2', sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,.16) 0 2px, transparent 3px) 0 0 / 38px 38px,
+      linear-gradient(135deg, #6c4cf5, #3b82f6);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 70px 0 80px; box-sizing: border-box; color: #fff;
+  }
+  .left { display: flex; flex-direction: column; gap: 6px; }
+  .brand { display: flex; align-items: center; gap: 22px; }
+  .brand img { width: 118px; height: 118px; border-radius: 28px; box-shadow: 0 8px 0 rgba(0,0,0,.18); }
+  h1 { margin: 0; font-size: 124px; font-weight: 800; line-height: .9; letter-spacing: -2px; text-shadow: 0 6px 0 rgba(0,0,0,.2); }
+  h1 span { color: #ffc93c; }
+  p { margin: 18px 0 0; font-size: 38px; font-weight: 700; line-height: 1.15; opacity: .95; }
+  .card {
+    position: relative; width: 340px; height: 300px; background: #fff; border-radius: 26px;
+    box-shadow: 0 8px 0 rgba(31,27,58,.2), 0 20px 40px rgba(31,27,58,.25); transform: rotate(4deg);
+  }
+  .card svg { position: absolute; inset: 18px; }
+  .bubble {
+    position: absolute; background: #fff; color: #1f1b3a; font-weight: 800; font-size: 26px;
+    padding: 8px 18px; border-radius: 18px; box-shadow: 0 5px 0 rgba(31,27,58,.18);
+  }
+  .b1 { left: -70px; bottom: 36px; transform: rotate(-6deg); }
+  .b2 { right: -26px; top: -26px; background: #2fbf71; color: #fff; transform: rotate(6deg); }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand"><img src="../client/public/icons/icon-512.png" alt="" /><h1>Kara<span>la</span></h1></div>
+    <p>Çiz, tahmin et,<br />kahkahayı bas!</p>
+  </div>
+  <div class="card">
+    <svg viewBox="0 0 304 264" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="250" cy="48" r="26" fill="#ffd43b" stroke="#f59f00" stroke-width="6" />
+      <path d="M40 140 L130 62 L220 140" stroke="#e03131" stroke-width="9" />
+      <path d="M62 128 V236 H198 V128" stroke="#1971c2" stroke-width="9" />
+      <path d="M112 236 V184 H148 V236" stroke="#8d5524" stroke-width="8" />
+      <path d="M10 246 C 70 236, 220 252, 294 240" stroke="#2f9e44" stroke-width="8" />
+    </svg>
+    <div class="bubble b1">kulübe? 🤔</div>
+    <div class="bubble b2">✅ EV!</div>
+  </div>
+</body>
+</html>

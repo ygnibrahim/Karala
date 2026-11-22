@@ -7,3 +7,8 @@ client/android/.gradle/
 client/android/local.properties
 .env
 .claude/
+
+# Android imza anahtarı ve şifreleri: ASLA depoya girmez (kaybolursa/sızarsa güncelleme güvenliği gider).
+*.jks
+*.keystore
+keystore.properties

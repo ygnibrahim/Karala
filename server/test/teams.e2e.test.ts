@@ -6,9 +6,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TEAM_SCORING } from '../src/config';
 import {
   type Client,
+  connectClient,
   eventsOf,
   type Game,
+  join,
   nextEvent,
+  payload,
   reconnect,
   settle,
   setupRoom,
@@ -218,6 +221,48 @@ describe('Çizim Yarışı: tur', () => {
 });
 
 describe('Çizim Yarışı: kopma, ayrılma ve oyun sonu', () => {
+  it('oyun sırasında takıma katılan oyuncu, takımında en az çizmiş olduğu için sıradaki turda çizer', async () => {
+    const { game, all } = await teamsRoom(3, 2); // 4 kişi, 2 × 2 = 4 tur
+    await startRace(game, all);
+    // Turun durumu gelmiş olabilir: kayıttaki geçmiş olaylara da bak.
+    const turnState = (turn: number) =>
+      nextEvent<RoomState>(
+        game.host,
+        'room:state',
+        (s) => s.teams?.race?.turn === turn && s.teams.race.stage === 'draw',
+        0,
+        5000,
+      );
+    // Kırmızı takımın tahmin edeni bilir; turu bitirir.
+    const finishTurn = async (turn: number) => {
+      const st = await turnState(turn);
+      const race = st.teams?.race;
+      const members = st.teams?.members ?? {};
+      const drawer = all.find((m) => m.id === race?.drawers.red);
+      const guesser = all.find((m) => members[m.id] === 'red' && m.id !== race?.drawers.red);
+      if (!drawer || !guesser) throw new Error('kırmızı takım eksik');
+      const word = eventsOf(drawer.socket, 'word:secret').at(-1) as string;
+      guesser.socket.emit('chat:send', word);
+      return st;
+    };
+    await finishTurn(1);
+    await finishTurn(2);
+    // 3. turda yeni oyuncu gelir (eski sırayla, 4. turda yine eski oyunculardan biri çizerdi).
+    await turnState(3);
+    const socket = await connectClient(ts);
+    const p = payload('Geç Gelen', { code: game.code });
+    const joined = await join(socket, p);
+    if (!joined.ok) throw new Error(joined.error);
+    all.push({ socket, id: joined.playerId, sessionId: p.sessionId, name: 'Geç Gelen' });
+    await settle();
+    const lateTeam = lastState(game.host).teams?.members[joined.playerId];
+    expect(lateTeam).toBeTruthy();
+    await finishTurn(3);
+    const turn4 = await turnState(4);
+    expect(turn4.teams?.race?.drawers[lateTeam as TeamId]).toBe(joined.playerId);
+    expect(eventsOf(socket, 'word:secret').at(-1)).toBeTruthy();
+  }, 20_000);
+
   it('sayfayı yenileyen çizen kelimeyi ve kendi takımının çizimini geri alır', async () => {
     const { game, all } = await teamsRoom();
     const { red } = await startRace(game, all);

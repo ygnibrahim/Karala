@@ -162,6 +162,11 @@ export class Room {
       };
       this.players.push(player);
       this.teamOf.set(player.id, this.smallerTeam());
+      // Klasik oyun sürerken gelen oyuncu bu turun çizim sırasına eklenir: sonraki turu beklemesin
+      // (son turda katılan hiç çizemezdi).
+      if (isActiveTurn(this.phase) || this.phase === 'turnEnd') this.queue.push(player.id);
+      // Sahtekâr modunda bir sonraki turdan itibaren oyuna katılır.
+      this.impostor?.addParticipant(player.id);
       this.system('joined', { name });
     }
 

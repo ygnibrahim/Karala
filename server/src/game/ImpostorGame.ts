@@ -59,7 +59,7 @@ export class ImpostorGame {
   stage: ImpostorStage = 'intro';
   round = 0;
 
-  private readonly participants: readonly string[];
+  private readonly participants: string[];
   private pastImpostors = new Set<string>();
   private order: string[] = [];
   private impostorId = '';
@@ -84,6 +84,11 @@ export class ImpostorGame {
 
   start(): void {
     this.nextRound();
+  }
+
+  /** Oyun sırasında odaya gelen oyuncu: bir sonraki turdan itibaren oyuna katılır (rolü o zaman verilir). */
+  addParticipant(playerId: string): void {
+    if (!this.participants.includes(playerId)) this.participants.push(playerId);
   }
 
   // ---------- Tur akışı ----------
@@ -163,7 +168,8 @@ export class ImpostorGame {
   private finishRound(guessedRight: boolean, guess: string | null = null): void {
     const votes = Object.fromEntries(this.votes);
     const caught = isCaught(votes, this.impostorId);
-    const gains = impostorGains(this.participants, this.impostorId, votes, caught, guessedRight);
+    // Sadece bu turu oynayanlar puan alır (tur ortasında gelen, oynamadığı turdan puan almasın).
+    const gains = impostorGains(this.order, this.impostorId, votes, caught, guessedRight);
     this.hooks.award(gains);
     this.result = { impostorId: this.impostorId, word: this.word, votes, caught, guess, guessedRight, gains };
     this.hooks.archive?.(this.word);

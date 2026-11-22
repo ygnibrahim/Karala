@@ -46,6 +46,45 @@ async function playTurn(game: Game, choosing: RoomState): Promise<RoomState> {
 }
 
 describe('klasik mod: tam oyun', () => {
+  it('oyun sırasında katılan oyuncu aynı turda çizme sırasına girer (son turda bile)', async () => {
+    const game = await setupRoom(ts, 1);
+    game.host.emit('room:settings', { rounds: 2 });
+    await waitForState(game.host, (s) => s.settings.rounds === 2);
+    let from = game.host.log.length;
+    game.host.emit('game:start');
+
+    const drawers: { id: string | null; round: number }[] = [];
+    let lateId = '';
+    let late: Game['others'][number] | null = null;
+    for (;;) {
+      const st = await nextEvent<RoomState>(
+        game.host,
+        'room:state',
+        (s) => s.phase === 'choosing' || s.phase === 'gameEnd',
+        from,
+      );
+      if (st.phase === 'gameEnd') break;
+      drawers.push({ id: st.drawerId, round: st.round });
+      // Son turun (2. tur) ilk çizimi sırasında yeni biri gelsin.
+      if (st.round === 2 && !late) {
+        const socket = await connectClient(ts);
+        const p = payload('Geç Gelen', { code: game.code });
+        const joined = await join(socket, p);
+        if (!joined.ok) throw new Error(joined.error);
+        lateId = joined.playerId;
+        late = { socket, id: lateId, sessionId: p.sessionId };
+        game.others.push(late);
+        await settle();
+      }
+      from = game.host.log.length;
+      await playTurn(game, st);
+      from = game.host.log.length;
+    }
+    // Geç gelen, oyun bitmeden 2. turda çizdi.
+    expect(drawers.filter((d) => d.id === lateId)).toEqual([{ id: lateId, round: 2 }]);
+    expect(drawers).toHaveLength(5);
+  }, 30_000);
+
   it('2 tur × 2 oyuncu: herkes sırayla çizer, oyun biter, puanlar birikir, tekrar oynanır', async () => {
     const game = await setupRoom(ts, 1);
     game.host.emit('room:settings', { rounds: 2 });

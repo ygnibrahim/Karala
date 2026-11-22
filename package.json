@@ -16,7 +16,8 @@
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
     "check": "npm run lint && npm run typecheck && npm test",
     "android:live": "npm run android:live -w client",
-    "android:build": "npm run android:build -w client"
+    "android:build": "npm run android:build -w client",
+    "android:bundle": "npm run android:bundle -w client"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",

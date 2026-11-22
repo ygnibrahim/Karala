@@ -18,6 +18,8 @@
 @media (max-width: 820px) {
   .lobby {
     padding: 10px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
   .lobby-grid {
     grid-template-columns: 1fr;

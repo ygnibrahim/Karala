@@ -57,7 +57,7 @@
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
     },
     {
-      "includes": ["**/scripts/**", "**/test/**", "**/*.test.ts"],
+      "includes": ["**/scripts/**", "store/tools/**", "**/test/**", "**/*.test.ts"],
       "linter": { "rules": { "suspicious": { "noConsole": "off" }, "style": { "noNonNullAssertion": "off" } } }
     }
   ]

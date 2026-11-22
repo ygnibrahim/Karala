@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { messageFx, stateFx } from './effects/gameFx';
 import { getLang, useT } from './i18n';
 import { keepServerAwake, reconnectOnReturn } from './lib/connection';
+import { useNativeBack } from './lib/nativeBack';
 import {
   getActiveRoom,
   getSessionId,
@@ -182,6 +183,9 @@ export default function App() {
     socket.emit('room:leave');
     resetRoom();
   };
+
+  // Android uygulamasında geri tuşu: pencereyi kapat / odadan çıkmayı sor / arka plana al.
+  useNativeBack({ inRoom, confirmText: t('game.leaveConfirm'), leave });
 
   let screen: React.ReactNode;
   if (!room) {
